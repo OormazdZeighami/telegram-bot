@@ -1,0 +1,48 @@
+# پوشه وابستگی‌ها
+node_modules/
+
+# فایل‌های لاگ
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# فایل‌های محیطی
+.env
+.env.test
+.env.production
+.env.local
+.env.*.local
+
+# پوشه‌های خروجی build (در صورت استفاده از ابزارهای build)
+dist/
+build/
+.out/
+.next/
+coverage/
+
+# فایل‌های تست
+*.lcov
+
+# فایل‌های cache ابزارها
+.cache/
+.nyc_output/
+jest-cache/
+jest-test-results.json
+
+# فایل‌های مربوط به IDE
+.vscode/
+.idea/
+
+# فایل‌های سیستم عامل
+.DS_Store
+Thumbs.db
+
+# سایر فایل‌های موقتی یا پشتیبان
+*.log
+*.pid
+*.seed
+*.bak
+*.tmp
+*.swp
+*.swo
