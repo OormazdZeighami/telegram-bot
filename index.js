@@ -431,7 +431,8 @@ const axios = require("axios");
 const he = require("he");
 
 // 🔑 توکن ربات خود را اینجا قرار دهید
-const token = "8024875280:AAGv3q8X8uO3BkYmNURLZnHTFoaJhOoTfQY";
+const token = process.env.BOT_TOKEN;
+
 const bot = new TelegramBot(token, { polling: true });
 
 let games = {};
