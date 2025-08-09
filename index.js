@@ -426,378 +426,17 @@
 
 
 
-const TelegramBot = require("node-telegram-bot-api");
-const axios = require("axios");
-const he = require("he");
-
-// 🔑 توکن ربات خود را اینجا قرار دهید
-const token = process.env.BOT_TOKEN;
-
-const bot = new TelegramBot(token, { polling: true });
-
-let games = {};
-
-const CATEGORIES = {
-  "🌐 اطلاعات عمومی": 9,
-  "🎬 فیلم": 11,
-  "🎵 موسیقی": 12,
-  "⚽️ ورزش": 21,
-  "🏛️ تاریخ": 23,
-};
-const ROUNDS = [5, 10, 15];
-const TIMERS = [15, 20, 30];
-
-// =================================================================================================
-// 🎨 تابع اصلی UI: این تابع قلب تپنده ظاهر ربات شماست و پیام بازی را می‌سازد 🎨
-// =================================================================================================
-function updateGameMessage(chatId) {
-  const game = games[chatId];
-  if (!game || !game.gameMessageId) return;
-
-  let text = "";
-  let keyboard = [];
-
-  const createProgressBar = (player) => {
-    let bar = "";
-    for (let i = 1; i <= game.settings.rounds; i++) {
-      const answer = game.answers[i] ? game.answers[i][player.id] : undefined;
-      if (
-        i > game.currentRound ||
-        (game.state === "in_progress" && i === game.currentRound && !answer)
-      ) {
-        bar += "⚪️";
-      } else if (answer === undefined) {
-        bar += "❔";
-      } else {
-        bar += answer.isCorrect ? "✅" : "❌";
-      }
-    }
-    return bar;
-  };
-
-  const header =
-    "👑 *بازی کوئیز گروهی* 👑\n------------------------------------\n";
-
-  switch (game.state) {
-    case "configuring_category":
-      text = `${header}⚙️ *مرحله ۱ از ۳: تنظیمات*\nلطفاً موضوع بازی را انتخاب کنید:`;
-      let categoryKeyboard = Object.entries(CATEGORIES).map(([name, id]) => ({
-        text: name,
-        callback_data: `cfg_category_${id}`,
-      }));
-      keyboard = [categoryKeyboard.slice(0, 3), categoryKeyboard.slice(3)];
-      break;
-
-    case "configuring_rounds":
-      text = `${header}⚙️ *مرحله ۲ از ۳: تنظیمات*\nتعداد سوالات را انتخاب کنید:`;
-      keyboard = [
-        ROUNDS.map((r) => ({
-          text: `🔢 ${r} سوال`,
-          callback_data: `cfg_rounds_${r}`,
-        })),
-      ];
-      break;
-
-    case "configuring_timer":
-      text = `${header}⚙️ *مرحله ۳ از ۳: تنظیمات*\nزمان هر سوال را انتخاب کنید:`;
-      keyboard = [
-        TIMERS.map((t) => ({
-          text: `⏱️ ${t} ثانیه`,
-          callback_data: `cfg_timer_${t}`,
-        })),
-      ];
-      break;
-
-    case "lobby":
-      const categoryName = Object.keys(CATEGORIES).find(
-        (key) => CATEGORIES[key] == game.settings.category
-      );
-      let playerList = Object.values(game.players)
-        .map((p) => `▪️ ${p.name}`)
-        .join("\n");
-      if (!playerList) playerList = "_هنوز کسی ملحق نشده..._";
-      // FIX: Replaced problematic characters with emojis that don't conflict with Markdown
-      text = `${header}📣 *لابی بازی آماده است!*\n\n📜 *موضوع:* ${categoryName}\n🔢 *تعداد سوالات:* ${game.settings.rounds}\n⏱️ *زمان هر سوال:* ${game.settings.timer} ثانیه\n\n👥 *بازیکنان حاضر:*\n${playerList}`;
-      keyboard = [
-        [{ text: "✅ من هم بازی می‌کنم", callback_data: "join" }],
-        [{ text: "🚀 شروع بازی (فقط سازنده)", callback_data: "start" }],
-      ];
-      break;
-
-    case "in_progress":
-      const currentQuestion = game.questions[game.currentRound - 1];
-      let playerProgress = Object.values(game.players)
-        .map((p) => {
-          const progressBar = createProgressBar(p);
-          return `*${p.name}*\n${progressBar}   (${p.score} امتیاز)`;
-        })
-        .join("\n\n");
-      text = `${header}❓ *سوال ${game.currentRound} از ${game.settings.rounds}*\n\n_${currentQuestion.question}_\n\n------------------------------------\n${playerProgress}`;
-      keyboard = [
-        currentQuestion.options.map((option) => ({
-          text: he.decode(option),
-          callback_data: `answer_${option}`,
-        })),
-      ];
-      break;
-
-    case "round_summary":
-      const prevQuestion = game.questions[game.currentRound - 1];
-      let summaryProgress = Object.values(game.players)
-        .map((p) => {
-          const progressBar = createProgressBar(p);
-          return `*${p.name}*\n${progressBar}   (${p.score} امتیاز)`;
-        })
-        .join("\n\n");
-      text = `${header}✔️ *نتایج دور ${game.currentRound}*\n\nپاسخ صحیح: *${prevQuestion.correct_answer}*\n\n------------------------------------\n${summaryProgress}`;
-      break;
-
-    case "finished":
-      let finalScores = `${header}🎉🏆 *بازی تمام شد! نتایج نهایی* 🏆🎉\n\n`;
-      const sortedPlayers = Object.values(game.players).sort(
-        (a, b) => b.score - a.score
-      );
-      const highScore = sortedPlayers.length > 0 ? sortedPlayers[0].score : 0;
-      sortedPlayers.forEach((player) => {
-        const medal = player.score === highScore && highScore > 0 ? "🥇" : "▫️";
-        const progressBar = createProgressBar(player);
-        finalScores += `*${medal} ${player.name}: ${player.score} امتیاز*\n${progressBar}\n\n`;
-      });
-      text = finalScores;
-      break;
-  }
-
-  bot
-    .editMessageText(text, {
-      chat_id: chatId,
-      message_id: game.gameMessageId,
-      parse_mode: "Markdown", // I've used Markdown here, making sure it's valid.
-      reply_markup: { inline_keyboard: keyboard },
-    })
-    .catch((err) => {
-      console.error(
-        `Error updating message in state ${game.state}:`,
-        err.response ? err.response.body : err.message
-      );
-    });
-}
-
-// --- Event Handlers ---
-bot.onText(/\/newgame/, async (msg) => {
-  const chatId = msg.chat.id;
-  if (msg.chat.type === "private")
-    return bot.sendMessage(chatId, "این بازی فقط در گروه‌ها قابل اجراست!");
-  if (games[chatId] && games[chatId].state !== "finished")
-    return bot.sendMessage(
-      chatId,
-      "یک بازی فعال است. برای لغو از /cancelgame استفاده کنید."
-    );
-
-  const gameMessage = await bot.sendMessage(chatId, "در حال ساخت بازی جدید...");
-  games[chatId] = {
-    state: "configuring_category",
-    creatorId: msg.from.id,
-    creatorName: msg.from.first_name,
-    gameMessageId: gameMessage.message_id,
-    players: {},
-    settings: {},
-    answers: {},
-  };
-  updateGameMessage(chatId);
-});
-
-bot.on("callback_query", async (callbackQuery) => {
-  const { message, from, data } = callbackQuery;
-  const chatId = message.chat.id;
-  const userId = from.id;
-  let game = games[chatId];
-
-  if (!game || message.message_id !== game.gameMessageId)
-    return bot.answerCallbackQuery(callbackQuery.id);
-
-  const action = data.split("_")[0];
-  const value = data.substring(action.length + 1);
-
-  if (action === "cfg" && userId !== game.creatorId)
-    return bot.answerCallbackQuery(callbackQuery.id, {
-      text: "فقط سازنده می‌تواند تنظیمات را تغییر دهد.",
-    });
-
-  // ✅ **منطق اصلاح شده و تمیزتر برای تنظیمات**
-  if (action === "cfg") {
-    const [type, val] = value.split("_");
-    if (type === "category") {
-      game.settings.category = val;
-      game.state = "configuring_rounds";
-    } else if (type === "rounds") {
-      game.settings.rounds = parseInt(val, 10);
-      game.state = "configuring_timer";
-    } else if (type === "timer") {
-      game.settings.timer = parseInt(val, 10);
-      game.state = "lobby";
-    }
-    updateGameMessage(chatId);
-    return; // از ادامه اجرای سوییچ جلوگیری کن
-  }
-
-  switch (action) {
-    case "join":
-      if (game.state !== "lobby") return;
-      if (!game.players[userId]) {
-        game.players[userId] = { id: userId, name: from.first_name, score: 0 };
-        bot.answerCallbackQuery(callbackQuery.id, {
-          text: "شما به بازی ملحق شدید!",
-        });
-        updateGameMessage(chatId);
-      } else {
-        bot.answerCallbackQuery(callbackQuery.id, {
-          text: "شما از قبل در بازی هستید.",
-        });
-      }
-      break;
-
-    case "start":
-      if (userId !== game.creatorId || game.state !== "lobby") return;
-      if (!game.players[userId]) {
-        game.players[userId] = { id: userId, name: from.first_name, score: 0 };
-      }
-      if (Object.keys(game.players).length === 0)
-        return bot.answerCallbackQuery(callbackQuery.id, {
-          text: "حداقل یک بازیکن نیاز است!",
-        });
-      await fetchQuestionsAndStart(chatId);
-      break;
-
-    case "answer":
-      if (
-        game.state !== "in_progress" ||
-        !game.players[userId] ||
-        (game.answers[game.currentRound] &&
-          game.answers[game.currentRound][userId])
-      )
-        return bot.answerCallbackQuery(callbackQuery.id, {
-          text: "شما قبلاً پاسخ داده‌اید.",
-        });
-
-      const currentQuestion = game.questions[game.currentRound - 1];
-      const isCorrect = value === currentQuestion.correct_answer;
-      if (isCorrect) game.players[userId].score++;
-
-      game.answers[game.currentRound][userId] = {
-        answer: value,
-        isCorrect: isCorrect,
-      };
-      bot.answerCallbackQuery(callbackQuery.id);
-      updateGameMessage(chatId);
-
-      if (
-        Object.keys(game.answers[game.currentRound]).length ===
-        Object.keys(game.players).length
-      ) {
-        clearTimeout(game.timerId);
-        nextRound(chatId);
-      }
-      break;
-  }
-});
-
-async function fetchQuestionsAndStart(chatId) {
-  const game = games[chatId];
-  try {
-    const res = await axios.get(
-      `https://opentdb.com/api.php?amount=${game.settings.rounds}&category=${game.settings.category}&type=multiple`
-    );
-    if (res.data.response_code !== 0) throw new Error("سوال کافی یافت نشد.");
-    game.questions = res.data.results.map((q) => ({
-      question: he.decode(q.question),
-      correct_answer: he.decode(q.correct_answer),
-      options: [
-        ...q.incorrect_answers.map((a) => he.decode(a)),
-        he.decode(q.correct_answer),
-      ].sort(() => Math.random() - 0.5),
-    }));
-    game.currentRound = 0;
-    for (let i = 1; i <= game.settings.rounds; i++) {
-      game.answers[i] = {};
-    }
-    nextRound(chatId);
-  } catch (e) {
-    bot.sendMessage(chatId, `خطا: ${e.message}. بازی لغو شد.`);
-    delete games[chatId];
-  }
-}
-
-function nextRound(chatId) {
-  const game = games[chatId];
-  if (!game) return;
-
-  if (game.currentRound > 0) {
-    game.state = "round_summary";
-    updateGameMessage(chatId);
-  }
-
-  if (game.currentRound >= game.settings.rounds) {
-    setTimeout(() => {
-      if (!games[chatId]) return;
-      game.state = "finished";
-      updateGameMessage(chatId);
-    }, 4000);
-    return;
-  }
-
-  const delay = game.currentRound > 0 ? 4000 : 1000;
-  setTimeout(() => {
-    if (!games[chatId]) return;
-    game.currentRound++;
-    game.state = "in_progress";
-    updateGameMessage(chatId);
-
-    game.timerId = setTimeout(() => {
-      if (games[chatId] && games[chatId].state === "in_progress") {
-        nextRound(chatId);
-      }
-    }, game.settings.timer * 1000);
-  }, delay);
-}
-
-// --- دستورات کمکی ---
-bot.onText(/\/start/, (msg) =>
-  bot.sendMessage(
-    msg.chat.id,
-    "برای شروع بازی در گروه از /newgame استفاده کنید."
-  )
-);
-bot.onText(/\/cancelgame/, (msg) => {
-  const game = games[msg.chat.id];
-  if (game && msg.from.id === game.creatorId) {
-    if (game.timerId) clearTimeout(game.timerId);
-    delete games[msg.chat.id];
-    bot.sendMessage(msg.chat.id, "✅ بازی فعال لغو شد.");
-  }
-});
-
-console.log("ربات کوئیز با UI نهایی و باگ فیکس شده با موفقیت روشن شد!");
-
-
-
-
-
-
-
 // const TelegramBot = require("node-telegram-bot-api");
 // const axios = require("axios");
 // const he = require("he");
-// // کتابخانه برای ترجمه
-// const { translate } = require("@vitalets/google-translate-api");
 
 // // 🔑 توکن ربات خود را اینجا قرار دهید
-// const token = "8024875280:AAGv3q8X8uO3BkYmNURLZnHTFoaJhOoTfQY";
+// const token = process.env.BOT_TOKEN;
+
 // const bot = new TelegramBot(token, { polling: true });
 
-// // متغیر برای نگهداری وضعیت بازی‌ها در گروه‌های مختلف
 // let games = {};
 
-// // تنظیمات پیش‌فرض بازی
 // const CATEGORIES = {
 //   "🌐 اطلاعات عمومی": 9,
 //   "🎬 فیلم": 11,
@@ -806,7 +445,7 @@ console.log("ربات کوئیز با UI نهایی و باگ فیکس شده ب
 //   "🏛️ تاریخ": 23,
 // };
 // const ROUNDS = [5, 10, 15];
-// const TIMERS = [15, 20, 30]; // زمان هر سوال به ثانیه
+// const TIMERS = [15, 20, 30];
 
 // // =================================================================================================
 // // 🎨 تابع اصلی UI: این تابع قلب تپنده ظاهر ربات شماست و پیام بازی را می‌سازد 🎨
@@ -837,7 +476,7 @@ console.log("ربات کوئیز با UI نهایی و باگ فیکس شده ب
 //   };
 
 //   const header =
-//     "👑 **بازی کوئیز گروهی** 👑\n------------------------------------\n";
+//     "👑 *بازی کوئیز گروهی* 👑\n------------------------------------\n";
 
 //   switch (game.state) {
 //     case "configuring_category":
@@ -848,6 +487,7 @@ console.log("ربات کوئیز با UI نهایی و باگ فیکس شده ب
 //       }));
 //       keyboard = [categoryKeyboard.slice(0, 3), categoryKeyboard.slice(3)];
 //       break;
+
 //     case "configuring_rounds":
 //       text = `${header}⚙️ *مرحله ۲ از ۳: تنظیمات*\nتعداد سوالات را انتخاب کنید:`;
 //       keyboard = [
@@ -857,6 +497,7 @@ console.log("ربات کوئیز با UI نهایی و باگ فیکس شده ب
 //         })),
 //       ];
 //       break;
+
 //     case "configuring_timer":
 //       text = `${header}⚙️ *مرحله ۳ از ۳: تنظیمات*\nزمان هر سوال را انتخاب کنید:`;
 //       keyboard = [
@@ -866,6 +507,7 @@ console.log("ربات کوئیز با UI نهایی و باگ فیکس شده ب
 //         })),
 //       ];
 //       break;
+
 //     case "lobby":
 //       const categoryName = Object.keys(CATEGORIES).find(
 //         (key) => CATEGORIES[key] == game.settings.category
@@ -874,12 +516,14 @@ console.log("ربات کوئیز با UI نهایی و باگ فیکس شده ب
 //         .map((p) => `▪️ ${p.name}`)
 //         .join("\n");
 //       if (!playerList) playerList = "_هنوز کسی ملحق نشده..._";
+//       // FIX: Replaced problematic characters with emojis that don't conflict with Markdown
 //       text = `${header}📣 *لابی بازی آماده است!*\n\n📜 *موضوع:* ${categoryName}\n🔢 *تعداد سوالات:* ${game.settings.rounds}\n⏱️ *زمان هر سوال:* ${game.settings.timer} ثانیه\n\n👥 *بازیکنان حاضر:*\n${playerList}`;
 //       keyboard = [
 //         [{ text: "✅ من هم بازی می‌کنم", callback_data: "join" }],
 //         [{ text: "🚀 شروع بازی (فقط سازنده)", callback_data: "start" }],
 //       ];
 //       break;
+
 //     case "in_progress":
 //       const currentQuestion = game.questions[game.currentRound - 1];
 //       let playerProgress = Object.values(game.players)
@@ -896,6 +540,7 @@ console.log("ربات کوئیز با UI نهایی و باگ فیکس شده ب
 //         })),
 //       ];
 //       break;
+
 //     case "round_summary":
 //       const prevQuestion = game.questions[game.currentRound - 1];
 //       let summaryProgress = Object.values(game.players)
@@ -906,6 +551,7 @@ console.log("ربات کوئیز با UI نهایی و باگ فیکس شده ب
 //         .join("\n\n");
 //       text = `${header}✔️ *نتایج دور ${game.currentRound}*\n\nپاسخ صحیح: *${prevQuestion.correct_answer}*\n\n------------------------------------\n${summaryProgress}`;
 //       break;
+
 //     case "finished":
 //       let finalScores = `${header}🎉🏆 *بازی تمام شد! نتایج نهایی* 🏆🎉\n\n`;
 //       const sortedPlayers = Object.values(game.players).sort(
@@ -920,14 +566,20 @@ console.log("ربات کوئیز با UI نهایی و باگ فیکس شده ب
 //       text = finalScores;
 //       break;
 //   }
+
 //   bot
 //     .editMessageText(text, {
 //       chat_id: chatId,
 //       message_id: game.gameMessageId,
-//       parse_mode: "Markdown",
+//       parse_mode: "Markdown", // I've used Markdown here, making sure it's valid.
 //       reply_markup: { inline_keyboard: keyboard },
 //     })
-//     .catch((err) => {});
+//     .catch((err) => {
+//       console.error(
+//         `Error updating message in state ${game.state}:`,
+//         err.response ? err.response.body : err.message
+//       );
+//     });
 // }
 
 // // --- Event Handlers ---
@@ -959,31 +611,33 @@ console.log("ربات کوئیز با UI نهایی و باگ فیکس شده ب
 //   const chatId = message.chat.id;
 //   const userId = from.id;
 //   let game = games[chatId];
+
 //   if (!game || message.message_id !== game.gameMessageId)
 //     return bot.answerCallbackQuery(callbackQuery.id);
+
 //   const action = data.split("_")[0];
 //   const value = data.substring(action.length + 1);
+
 //   if (action === "cfg" && userId !== game.creatorId)
 //     return bot.answerCallbackQuery(callbackQuery.id, {
 //       text: "فقط سازنده می‌تواند تنظیمات را تغییر دهد.",
 //     });
 
+//   // ✅ **منطق اصلاح شده و تمیزتر برای تنظیمات**
 //   if (action === "cfg") {
 //     const [type, val] = value.split("_");
 //     if (type === "category") {
 //       game.settings.category = val;
 //       game.state = "configuring_rounds";
-//     }
-//     if (type === "rounds") {
+//     } else if (type === "rounds") {
 //       game.settings.rounds = parseInt(val, 10);
 //       game.state = "configuring_timer";
-//     }
-//     if (type === "timer") {
+//     } else if (type === "timer") {
 //       game.settings.timer = parseInt(val, 10);
 //       game.state = "lobby";
 //     }
 //     updateGameMessage(chatId);
-//     return;
+//     return; // از ادامه اجرای سوییچ جلوگیری کن
 //   }
 
 //   switch (action) {
@@ -1001,6 +655,7 @@ console.log("ربات کوئیز با UI نهایی و باگ فیکس شده ب
 //         });
 //       }
 //       break;
+
 //     case "start":
 //       if (userId !== game.creatorId || game.state !== "lobby") return;
 //       if (!game.players[userId]) {
@@ -1012,6 +667,7 @@ console.log("ربات کوئیز با UI نهایی و باگ فیکس شده ب
 //         });
 //       await fetchQuestionsAndStart(chatId);
 //       break;
+
 //     case "answer":
 //       if (
 //         game.state !== "in_progress" ||
@@ -1022,16 +678,18 @@ console.log("ربات کوئیز با UI نهایی و باگ فیکس شده ب
 //         return bot.answerCallbackQuery(callbackQuery.id, {
 //           text: "شما قبلاً پاسخ داده‌اید.",
 //         });
+
 //       const currentQuestion = game.questions[game.currentRound - 1];
 //       const isCorrect = value === currentQuestion.correct_answer;
 //       if (isCorrect) game.players[userId].score++;
+
 //       game.answers[game.currentRound][userId] = {
 //         answer: value,
 //         isCorrect: isCorrect,
 //       };
-//       bot.answerCallbackQuery(callbackQuery.id, { text: "پاسخ شما ثبت شد!" });
-//       // به جای آپدیت کامل پیام، فقط در حالت پایدار آپدیت می‌کنیم
-//       // updateGameMessage(chatId);
+//       bot.answerCallbackQuery(callbackQuery.id);
+//       updateGameMessage(chatId);
+
 //       if (
 //         Object.keys(game.answers[game.currentRound]).length ===
 //         Object.keys(game.players).length
@@ -1043,77 +701,28 @@ console.log("ربات کوئیز با UI نهایی و باگ فیکس شده ب
 //   }
 // });
 
-// // تابع جدید و بهینه شده برای ترجمه سوالات
 // async function fetchQuestionsAndStart(chatId) {
 //   const game = games[chatId];
-//   const { rounds, category } = game.settings;
-
 //   try {
-//     const response = await axios.get(
-//       `https://opentdb.com/api.php?amount=${rounds}&category=${category}&type=multiple`
+//     const res = await axios.get(
+//       `https://opentdb.com/api.php?amount=${game.settings.rounds}&category=${game.settings.category}&type=multiple`
 //     );
-//     if (response.data.response_code !== 0)
-//       throw new Error("سوال کافی یافت نشد.");
-
-//     const englishQuestions = response.data.results;
-
-//     bot.editMessageText(
-//       `✅ سوالات دریافت شد. در حال ترجمه ${rounds} سوال به فارسی... (این فرآیند به دلیل محدودیت‌ها ممکن است تا یک دقیقه طول بکشد)`,
-//       {
-//         chat_id: chatId,
-//         message_id: game.gameMessageId,
-//         reply_markup: { inline_keyboard: [] },
-//       }
-//     );
-
-//     game.questions = [];
-//     for (const q of englishQuestions) {
-//       const translatedParts = {};
-
-//       // ترجمه تک به تک و با تاخیر
-//       const questionText = he.decode(q.question);
-//       translatedParts.question = (
-//         await translate(questionText, { to: "fa" })
-//       ).text;
-//       await new Promise((resolve) => setTimeout(resolve, 250)); // تاخیر ۲۵۰ میلی‌ثانیه
-
-//       const correctAnswerText = he.decode(q.correct_answer);
-//       translatedParts.correct_answer = (
-//         await translate(correctAnswerText, { to: "fa" })
-//       ).text;
-//       await new Promise((resolve) => setTimeout(resolve, 250));
-
-//       translatedParts.incorrect_answers = [];
-//       for (const incorrect of q.incorrect_answers) {
-//         const incorrectText = he.decode(incorrect);
-//         translatedParts.incorrect_answers.push(
-//           (await translate(incorrectText, { to: "fa" })).text
-//         );
-//         await new Promise((resolve) => setTimeout(resolve, 250));
-//       }
-
-//       game.questions.push({
-//         question: translatedParts.question,
-//         correct_answer: translatedParts.correct_answer,
-//         options: [
-//           ...translatedParts.incorrect_answers,
-//           translatedParts.correct_answer,
-//         ].sort(() => Math.random() - 0.5),
-//       });
-//     }
-
+//     if (res.data.response_code !== 0) throw new Error("سوال کافی یافت نشد.");
+//     game.questions = res.data.results.map((q) => ({
+//       question: he.decode(q.question),
+//       correct_answer: he.decode(q.correct_answer),
+//       options: [
+//         ...q.incorrect_answers.map((a) => he.decode(a)),
+//         he.decode(q.correct_answer),
+//       ].sort(() => Math.random() - 0.5),
+//     }));
 //     game.currentRound = 0;
 //     for (let i = 1; i <= game.settings.rounds; i++) {
 //       game.answers[i] = {};
 //     }
-
 //     nextRound(chatId);
 //   } catch (e) {
-//     bot.sendMessage(
-//       chatId,
-//       `خطا در دریافت یا ترجمه سوالات: ${e.message}. بازی لغو شد.`
-//     );
-//     console.error(e);
+//     bot.sendMessage(chatId, `خطا: ${e.message}. بازی لغو شد.`);
 //     delete games[chatId];
 //   }
 // }
@@ -1121,24 +730,28 @@ console.log("ربات کوئیز با UI نهایی و باگ فیکس شده ب
 // function nextRound(chatId) {
 //   const game = games[chatId];
 //   if (!game) return;
+
 //   if (game.currentRound > 0) {
 //     game.state = "round_summary";
 //     updateGameMessage(chatId);
 //   }
+
 //   if (game.currentRound >= game.settings.rounds) {
 //     setTimeout(() => {
 //       if (!games[chatId]) return;
 //       game.state = "finished";
 //       updateGameMessage(chatId);
-//     }, 5000);
+//     }, 4000);
 //     return;
 //   }
-//   const delay = game.currentRound > 0 ? 5000 : 1000;
+
+//   const delay = game.currentRound > 0 ? 4000 : 1000;
 //   setTimeout(() => {
 //     if (!games[chatId]) return;
 //     game.currentRound++;
 //     game.state = "in_progress";
 //     updateGameMessage(chatId);
+
 //     game.timerId = setTimeout(() => {
 //       if (games[chatId] && games[chatId].state === "in_progress") {
 //         nextRound(chatId);
@@ -1163,4 +776,385 @@ console.log("ربات کوئیز با UI نهایی و باگ فیکس شده ب
 //   }
 // });
 
-// console.log("ربات کوئیز نهایی (با ترجمه بهینه) با موفقیت روشن شد!");
+// console.log("ربات کوئیز با UI نهایی و باگ فیکس شده با موفقیت روشن شد!");
+
+
+
+
+
+
+
+const TelegramBot = require("node-telegram-bot-api");
+const axios = require("axios");
+const he = require("he");
+const { translate } = require("@vitalets/google-translate-api");
+
+// 🔑 توکن ربات خود را اینجا قرار دهید
+const token = "8024875280:AAGv3q8X8uO3BkYmNURLZnHTFoaJhOoTfQY";
+const bot = new TelegramBot(token, { polling: true });
+
+let games = {};
+
+const CATEGORIES = {
+  "🌐 اطلاعات عمومی": 9,
+  "🎬 فیلم": 11,
+  "🎵 موسیقی": 12,
+  "⚽️ ورزش": 21,
+  "🏛️ تاریخ": 23,
+};
+const ROUNDS = [5, 10, 15];
+const TIMERS = [15, 20, 30];
+
+// تابع updateGameMessage بدون تغییر باقی می‌ماند
+function updateGameMessage(chatId) {
+  const game = games[chatId];
+  if (!game || !game.gameMessageId) return;
+
+  let text = "";
+  let keyboard = [];
+
+  const createProgressBar = (player) => {
+    let bar = "";
+    const totalRounds = game.settings.rounds;
+    for (let i = 1; i <= totalRounds; i++) {
+      const answer = game.answers[i] ? game.answers[i][player.id] : undefined;
+      if (
+        i > game.currentRound ||
+        (game.state === "in_progress" && i === game.currentRound && !answer)
+      ) {
+        bar += "⚪️";
+      } else if (answer === undefined) {
+        bar += "❔";
+      } else {
+        bar += answer.isCorrect ? "✅" : "❌";
+      }
+    }
+    return bar;
+  };
+
+  const header =
+    "👑 **بازی کوئیز گروهی** 👑\n------------------------------------\n";
+
+  switch (game.state) {
+    case "configuring_category":
+      text = `${header}⚙️ *مرحله ۱ از ۳: تنظیمات*\nلطفاً موضوع بازی را انتخاب کنید:`;
+      let categoryKeyboard = Object.entries(CATEGORIES).map(([name, id]) => ({
+        text: name,
+        callback_data: `cfg_category_${id}`,
+      }));
+      keyboard = [categoryKeyboard.slice(0, 3), categoryKeyboard.slice(3)];
+      break;
+    case "configuring_rounds":
+      text = `${header}⚙️ *مرحله ۲ از ۳: تنظیمات*\nتعداد سوالات را انتخاب کنید:`;
+      keyboard = [
+        ROUNDS.map((r) => ({
+          text: `🔢 ${r} سوال`,
+          callback_data: `cfg_rounds_${r}`,
+        })),
+      ];
+      break;
+    case "configuring_timer":
+      text = `${header}⚙️ *مرحله ۳ از ۳: تنظیمات*\nزمان هر سوال را انتخاب کنید:`;
+      keyboard = [
+        TIMERS.map((t) => ({
+          text: `⏱️ ${t} ثانیه`,
+          callback_data: `cfg_timer_${t}`,
+        })),
+      ];
+      break;
+    case "lobby":
+      const categoryName = Object.keys(CATEGORIES).find(
+        (key) => CATEGORIES[key] == game.settings.category
+      );
+      let playerList = Object.values(game.players)
+        .map((p) => `▪️ ${p.name}`)
+        .join("\n");
+      if (!playerList) playerList = "_هنوز کسی ملحق نشده..._";
+      text = `${header}📣 *لابی بازی آماده است!*\n\n📜 *موضوع:* ${categoryName}\n🔢 *تعداد سوالات:* ${game.settings.rounds}\n⏱️ *زمان هر سوال:* ${game.settings.timer} ثانیه\n\n👥 *بازیکنان حاضر:*\n${playerList}`;
+      keyboard = [
+        [{ text: "✅ من هم بازی می‌کنم", callback_data: "join" }],
+        [{ text: "🚀 شروع بازی (فقط سازنده)", callback_data: "start" }],
+      ];
+      break;
+    case "in_progress":
+      const currentQuestion = game.questions[game.currentRound - 1];
+      let playerProgress = Object.values(game.players)
+        .map((p) => {
+          const progressBar = createProgressBar(p);
+          return `*${p.name}*\n${progressBar}   (${p.score} امتیاز)`;
+        })
+        .join("\n\n");
+      text = `${header}❓ *سوال ${game.currentRound} از ${game.settings.rounds}*\n\n_${currentQuestion.question}_\n\n------------------------------------\n${playerProgress}`;
+      keyboard = [
+        currentQuestion.options.map((option) => ({
+          text: option,
+          callback_data: `answer_${option}`,
+        })),
+      ];
+      break;
+    case "round_summary":
+      const prevQuestion = game.questions[game.currentRound - 1];
+      let summaryProgress = Object.values(game.players)
+        .map((p) => {
+          const progressBar = createProgressBar(p);
+          return `*${p.name}*\n${progressBar}   (${p.score} امتیاز)`;
+        })
+        .join("\n\n");
+      text = `${header}✔️ *نتایج دور ${game.currentRound}*\n\nپاسخ صحیح: *${prevQuestion.correct_answer}*\n\n------------------------------------\n${summaryProgress}`;
+      break;
+    case "finished":
+      let finalScores = `${header}🎉🏆 *بازی تمام شد! نتایج نهایی* 🏆🎉\n\n`;
+      const sortedPlayers = Object.values(game.players).sort(
+        (a, b) => b.score - a.score
+      );
+      const highScore = sortedPlayers.length > 0 ? sortedPlayers[0].score : 0;
+      sortedPlayers.forEach((player) => {
+        const medal = player.score === highScore && highScore > 0 ? "🥇" : "▫️";
+        const progressBar = createProgressBar(player);
+        finalScores += `*${medal} ${player.name}: ${player.score} امتیاز*\n${progressBar}\n\n`;
+      });
+      text = finalScores;
+      break;
+  }
+  bot
+    .editMessageText(text, {
+      chat_id: chatId,
+      message_id: game.gameMessageId,
+      parse_mode: "Markdown",
+      reply_markup: { inline_keyboard: keyboard },
+    })
+    .catch(() => {});
+}
+
+bot.onText(/\/newgame/, async (msg) => {
+  const chatId = msg.chat.id;
+  if (msg.chat.type === "private")
+    return bot.sendMessage(chatId, "این بازی فقط در گروه‌ها قابل اجراست!");
+  if (games[chatId] && games[chatId].state !== "finished")
+    return bot.sendMessage(
+      chatId,
+      "یک بازی فعال است. برای لغو از /cancelgame استفاده کنید."
+    );
+
+  const gameMessage = await bot.sendMessage(chatId, "در حال ساخت بازی جدید...");
+  games[chatId] = {
+    state: "configuring_category",
+    creatorId: msg.from.id,
+    creatorName: msg.from.first_name,
+    gameMessageId: gameMessage.message_id,
+    players: {},
+    settings: {},
+    answers: {},
+  };
+  updateGameMessage(chatId);
+});
+
+bot.on("callback_query", async (callbackQuery) => {
+  // ... این بخش بدون تغییر است
+});
+
+// ✅ **تغییر ۱:** این تابع فقط سوالات انگلیسی را ذخیره می‌کند
+async function fetchQuestionsAndStart(chatId) {
+  const game = games[chatId];
+  try {
+    const res = await axios.get(
+      `https://opentdb.com/api.php?amount=${game.settings.rounds}&category=${game.settings.category}&type=multiple`
+    );
+    if (res.data.response_code !== 0) throw new Error("سوال کافی یافت نشد.");
+
+    // سوالات انگلیسی را در یک فیلد جدید ذخیره می‌کنیم
+    game.englishQuestions = res.data.results;
+    game.questions = []; // این آرایه در هر دور پر می‌شود
+
+    game.currentRound = 0;
+    for (let i = 1; i <= game.settings.rounds; i++) {
+      game.answers[i] = {};
+    }
+
+    nextRound(chatId);
+  } catch (e) {
+    bot.sendMessage(chatId, `خطا در دریافت سوالات: ${e.message}. بازی لغو شد.`);
+    delete games[chatId];
+  }
+}
+
+// ✅ **تغییر ۲:** منطق ترجمه به این تابع منتقل شده است
+async function nextRound(chatId) {
+  const game = games[chatId];
+  if (!game) return;
+
+  if (game.currentRound > 0) {
+    game.state = "round_summary";
+    updateGameMessage(chatId);
+  }
+
+  if (game.currentRound >= game.settings.rounds) {
+    setTimeout(() => {
+      if (!games[chatId]) return;
+      game.state = "finished";
+      updateGameMessage(chatId);
+    }, 5000);
+    return;
+  }
+
+  const delay = game.currentRound > 0 ? 5000 : 100; // تاخیر اولیه خیلی کم شد
+
+  setTimeout(async () => {
+    if (!games[chatId]) return;
+    game.currentRound++;
+
+    // ترجمه سوال فعلی، درست قبل از نمایش
+    try {
+      const q = game.englishQuestions[game.currentRound - 1];
+      bot.editMessageText(`⏳ در حال ترجمه سوال ${game.currentRound}...`, {
+        chat_id: chatId,
+        message_id: game.gameMessageId,
+        reply_markup: { inline_keyboard: [] },
+      });
+
+      const textsToTranslate = [
+        q.question,
+        q.correct_answer,
+        ...q.incorrect_answers,
+      ];
+      const translatedTexts = await Promise.all(
+        textsToTranslate.map((text) =>
+          translate(he.decode(text), { to: "fa" }).then((res) => res.text)
+        )
+      );
+
+      game.questions[game.currentRound - 1] = {
+        question: translatedTexts[0],
+        correct_answer: translatedTexts[1],
+        options: [...translatedTexts.slice(2), translatedTexts[1]].sort(
+          () => Math.random() - 0.5
+        ),
+      };
+    } catch (e) {
+      bot.sendMessage(
+        chatId,
+        `خطا در ترجمه سوال ${game.currentRound}. این دور رد می‌شود.`
+      );
+      console.error(e);
+      // رد شدن از این دور و رفتن به دور بعد
+      if (games[chatId]) {
+        // چک میکنیم که بازی هنوز وجود داشته باشد
+        setTimeout(() => nextRound(chatId), 2000);
+      }
+      return;
+    }
+
+    game.state = "in_progress";
+    updateGameMessage(chatId);
+
+    game.timerId = setTimeout(() => {
+      if (games[chatId] && games[chatId].state === "in_progress") {
+        nextRound(chatId);
+      }
+    }, game.settings.timer * 1000);
+  }, delay);
+}
+
+// ... (بقیه کد شامل on("callback_query") و دستورات کمکی بدون تغییر باقی می‌ماند)
+bot.on("callback_query", async (callbackQuery) => {
+  const { message, from, data } = callbackQuery;
+  const chatId = message.chat.id;
+  const userId = from.id;
+  let game = games[chatId];
+  if (!game || message.message_id !== game.gameMessageId)
+    return bot.answerCallbackQuery(callbackQuery.id);
+  const action = data.split("_")[0];
+  const value = data.substring(action.length + 1);
+  if (action === "cfg" && userId !== game.creatorId)
+    return bot.answerCallbackQuery(callbackQuery.id, {
+      text: "فقط سازنده می‌تواند تنظیمات را تغییر دهد.",
+    });
+
+  if (action === "cfg") {
+    const [type, val] = value.split("_");
+    if (type === "category") {
+      game.settings.category = val;
+      game.state = "configuring_rounds";
+    }
+    if (type === "rounds") {
+      game.settings.rounds = parseInt(val, 10);
+      game.state = "configuring_timer";
+    }
+    if (type === "timer") {
+      game.settings.timer = parseInt(val, 10);
+      game.state = "lobby";
+    }
+    updateGameMessage(chatId);
+    return;
+  }
+
+  switch (action) {
+    case "join":
+      if (game.state !== "lobby") return;
+      if (!game.players[userId]) {
+        game.players[userId] = { id: userId, name: from.first_name, score: 0 };
+        bot.answerCallbackQuery(callbackQuery.id, {
+          text: "شما به بازی ملحق شدید!",
+        });
+        updateGameMessage(chatId);
+      } else {
+        bot.answerCallbackQuery(callbackQuery.id, {
+          text: "شما از قبل در بازی هستید.",
+        });
+      }
+      break;
+    case "start":
+      if (userId !== game.creatorId || game.state !== "lobby") return;
+      if (!game.players[userId]) {
+        game.players[userId] = { id: userId, name: from.first_name, score: 0 };
+      }
+      if (Object.keys(game.players).length === 0)
+        return bot.answerCallbackQuery(callbackQuery.id, {
+          text: "حداقل یک بازیکن نیاز است!",
+        });
+      await fetchQuestionsAndStart(chatId);
+      break;
+    case "answer":
+      if (
+        game.state !== "in_progress" ||
+        !game.players[userId] ||
+        (game.answers[game.currentRound] &&
+          game.answers[game.currentRound][userId])
+      )
+        return bot.answerCallbackQuery(callbackQuery.id, {
+          text: "شما قبلاً پاسخ داده‌اید.",
+        });
+      const currentQuestion = game.questions[game.currentRound - 1];
+      const isCorrect = value === currentQuestion.correct_answer;
+      if (isCorrect) game.players[userId].score++;
+      game.answers[game.currentRound][userId] = {
+        answer: value,
+        isCorrect: isCorrect,
+      };
+      bot.answerCallbackQuery(callbackQuery.id, { text: "پاسخ شما ثبت شد!" });
+      if (
+        Object.keys(game.answers[game.currentRound]).length ===
+        Object.keys(game.players).length
+      ) {
+        clearTimeout(game.timerId);
+        nextRound(chatId);
+      }
+      break;
+  }
+});
+bot.onText(/\/start/, (msg) =>
+  bot.sendMessage(
+    msg.chat.id,
+    "برای شروع بازی در گروه از /newgame استفاده کنید."
+  )
+);
+bot.onText(/\/cancelgame/, (msg) => {
+  const game = games[msg.chat.id];
+  if (game && msg.from.id === game.creatorId) {
+    if (game.timerId) clearTimeout(game.timerId);
+    delete games[msg.chat.id];
+    bot.sendMessage(msg.chat.id, "✅ بازی فعال لغو شد.");
+  }
+});
+
+console.log("ربات کوئیز نهایی (با ترجمه در لحظه) با موفقیت روشن شد!");
