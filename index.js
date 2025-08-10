@@ -786,7 +786,7 @@ const TelegramBot = require("node-telegram-bot-api");
 const he = require("he");
 
 // 🔑 توکن ربات شما
-const token = "8024875280:AAGv3q8X8uO3BkYmNURLZnHTFoaJhOoTfQY";
+const token = process.env.BOT_TOKEN;
 const bot = new TelegramBot(token, { polling: true });
 
 let games = {};
