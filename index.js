@@ -782,8 +782,611 @@
 // console.log("ربات کوئیز با UI نهایی و باگ فیکس شده با موفقیت روشن شد!");
 
 
+// const TelegramBot = require("node-telegram-bot-api");
+// const he = require("he");
+
+// // 🔑 توکن ربات شما
+// const token = process.env.BOT_TOKEN;
+// const bot = new TelegramBot(token, { polling: true });
+
+// let games = {};
+
+// const allData = require("./questions.json");
+// let questionDecks = {};
+// let allCategories = {};
+// let englishSubCategories = {};
+
+// // آبجکت برای نگهداری آیکون‌های هر دسته
+// const categoryIcons = {
+//   general_knowledge: "🌍",
+//   history: "📜",
+//   geography: "🗺️",
+//   sports: "⚽️",
+//   english_language: "🇬🇧",
+//   food_nutrition: "🍔",
+//   technology: "💻",
+//   religious_info: "🙏",
+//   math_fun: "🎲",
+// };
+
+// // آبجکت برای آیکون‌های زیرشاخه‌های زبان
+// const englishSubCategoryIcons = {
+//   vocabulary: "📖",
+//   grammar: "✒️",
+//   idioms: "🤔",
+//   conversation: "💬",
+//   spelling: "✍️",
+// };
+
+// function initializeDecks() {
+//   console.log("Initializing and shuffling the question decks...");
+
+//   for (const mainCategoryKey in allData) {
+//     if (mainCategoryKey === "english_language") {
+//       allCategories[mainCategoryKey] = "زبان انگلیسی";
+
+//       for (const subCategoryKey in allData.english_language) {
+//         if (
+//           allData.english_language[subCategoryKey] &&
+//           allData.english_language[subCategoryKey].length > 0
+//         ) {
+//           const displayName =
+//             allData.english_language[subCategoryKey][0].sub_category;
+//           const uniqueKey = `${mainCategoryKey}_${subCategoryKey}`;
+
+//           englishSubCategories[uniqueKey] = displayName;
+
+//           questionDecks[uniqueKey] = {
+//             deck: JSON.parse(
+//               JSON.stringify(allData.english_language[subCategoryKey])
+//             ).sort(() => 0.5 - Math.random()),
+//             discardPile: [],
+//           };
+//         }
+//       }
+//     } else {
+//       if (allData[mainCategoryKey] && allData[mainCategoryKey].length > 0) {
+//         const displayName = allData[mainCategoryKey][0].category;
+//         allCategories[mainCategoryKey] = displayName;
+//         questionDecks[mainCategoryKey] = {
+//           deck: JSON.parse(JSON.stringify(allData[mainCategoryKey])).sort(
+//             () => 0.5 - Math.random()
+//           ),
+//           discardPile: [],
+//         };
+//       }
+//     }
+//   }
+//   console.log("Decks initialized successfully.");
+// }
+
+// initializeDecks();
+
+// const ROUNDS = [5, 10, 15];
+// const TIMERS = [15, 20, 30];
+
+// async function createNewGame(chatId, from, options = {}) {
+//   if (games[chatId] && games[chatId].state !== "finished") {
+//     bot.sendMessage(
+//       chatId,
+//       "یک بازی فعال است. برای لغو از /cancelgame استفاده کنید.",
+//       options
+//     );
+//     return;
+//   }
+
+//   const gameMessage = await bot.sendMessage(
+//     chatId,
+//     "در حال ساخت بازی جدید...",
+//     options
+//   );
+//   games[chatId] = {
+//     state: "configuring_category",
+//     creatorId: from.id,
+//     creatorName: from.first_name,
+//     gameMessageId: gameMessage.message_id,
+//     threadId: options.message_thread_id,
+//     players: {},
+//     settings: {},
+//     answers: {},
+//     lastMessageText: "",
+//     lastKeyboard: [],
+//   };
+//   updateGameMessage(chatId);
+// }
+
+// function updateGameMessage(chatId) {
+//   const game = games[chatId];
+//   if (!game || !game.gameMessageId) return;
+
+//   let text = "";
+//   let keyboard = [];
+
+//   const createProgressBar = (player) => {
+//     let bar = "";
+//     const totalRounds = game.settings.rounds;
+//     for (let i = 1; i <= totalRounds; i++) {
+//       const answer = game.answers[i] ? game.answers[i][player.id] : undefined;
+
+//       if (game.state === "in_progress" && i === game.currentRound && !answer) {
+//         bar += "⏳";
+//       } else if (
+//         i > game.currentRound ||
+//         (game.state === "round_summary" && i === game.currentRound && !answer)
+//       ) {
+//         bar += "⬜️";
+//       } else if (answer === undefined) {
+//         bar += "⬛️";
+//       } else {
+//         bar += answer.isCorrect ? "✅" : "❌";
+//       }
+//     }
+//     return bar;
+//   };
+
+//   const header = "👑 *بازی آنلاین کوئیز* 👑\n\n";
+
+//   switch (game.state) {
+//     case "configuring_category":
+//       text = `${header}*انتخاب دسته‌بندی* 🕹️\n\nیک موضوع را برای شروع انتخاب کنید:`;
+//       const categoryButtons = Object.entries(allCategories).map(
+//         ([uniqueKey, displayName]) => {
+//           const icon = categoryIcons[uniqueKey] || "📚";
+//           return {
+//             text: `${icon} ${displayName}`,
+//             callback_data: `cfg_category_${uniqueKey}`,
+//           };
+//         }
+//       );
+//       keyboard = [];
+//       for (let i = 0; i < categoryButtons.length; i += 2) {
+//         if (categoryButtons[i + 1]) {
+//           keyboard.push([categoryButtons[i], categoryButtons[i + 1]]);
+//         } else {
+//           keyboard.push([categoryButtons[i]]);
+//         }
+//       }
+//       break;
+
+//     case "configuring_subcategory":
+//       text = `${header}*انتخاب زیرشاخه زبان* 🇬🇧\n\nلطفاً یکی از زیرشاخه‌های زبان انگلیسی را انتخاب کنید:`;
+//       const subCategoryButtons = Object.entries(englishSubCategories).map(
+//         ([uniqueKey, displayName]) => {
+//           const subKey = uniqueKey.split("_")[2];
+//           const icon = englishSubCategoryIcons[subKey] || "📝";
+//           return {
+//             text: `${icon} ${displayName}`,
+//             callback_data: `cfg_category_${uniqueKey}`,
+//           };
+//         }
+//       );
+//       keyboard = [];
+//       for (let i = 0; i < subCategoryButtons.length; i += 2) {
+//         if (subCategoryButtons[i + 1]) {
+//           keyboard.push([subCategoryButtons[i], subCategoryButtons[i + 1]]);
+//         } else {
+//           keyboard.push([subCategoryButtons[i]]);
+//         }
+//       }
+//       keyboard.push([
+//         { text: "⬅️ بازگشت به منوی اصلی", callback_data: "cfg_back_main" },
+//       ]);
+//       break;
+
+//     case "configuring_rounds":
+//       const categoryName = game.settings.category.startsWith(
+//         "english_language_"
+//       )
+//         ? `زبان انگلیسی (${englishSubCategories[game.settings.category]})`
+//         : allCategories[game.settings.category];
+//       text = `${header}*تنظیم تعداد سوالات* 🔢\n\nبرای موضوع «${categoryName}» چند سوال بازی کنیم؟`;
+//       keyboard = [
+//         ROUNDS.map((r) => ({
+//           text: `${r} سوال`,
+//           callback_data: `cfg_rounds_${r}`,
+//         })),
+//       ];
+//       break;
+
+//     case "configuring_timer":
+//       text = `${header}*تنظیم زمان* ⏱️\n\nبرای پاسخ به هر سوال چند ثانیه زمان می‌خواهید؟`;
+//       keyboard = [
+//         TIMERS.map((t) => ({
+//           text: `${t} ثانیه`,
+//           callback_data: `cfg_timer_${t}`,
+//         })),
+//       ];
+//       break;
+
+//     case "lobby":
+//       const lobbyCategoryName = game.settings.category.startsWith(
+//         "english_language_"
+//       )
+//         ? `زبان انگلیسی (${englishSubCategories[game.settings.category]})`
+//         : allCategories[game.settings.category];
+//       let playerList = Object.values(game.players)
+//         .map((p) => `👤 ${p.name}`)
+//         .join("\n");
+//       if (!playerList) playerList = "_هنوز کسی وارد بازی نشده..._";
+//       text = `${header}*لابی بازی* 📣\n\n*موضوع:* ${lobbyCategoryName}\n*تعداد سوالات:* ${game.settings.rounds}\n*زمان هر سوال:* ${game.settings.timer} ثانیه\n\n*بازیکنان حاضر:*\n${playerList}`;
+//       keyboard = [
+//         [{ text: "✅ من هم بازی می‌کنم", callback_data: "join" }],
+//         [{ text: "🚀 شروع بازی", callback_data: "start" }],
+//       ];
+//       break;
+
+//     case "in_progress":
+//       const currentQuestion = game.questions[game.currentRound - 1];
+//       let playerProgress = Object.values(game.players)
+//         .map((p) => {
+//           const progressBar = createProgressBar(p);
+//           return `*${p.name}* (${p.score} امتیاز)\n${progressBar}`;
+//         })
+//         .join("\n\n");
+//       text = `${header}*سوال ${game.currentRound} از ${
+//         game.settings.rounds
+//       }* ❓\n\n*${he.decode(
+//         currentQuestion.question
+//       )}*\n\n------------------------------------\n${playerProgress}`;
+//       keyboard = currentQuestion.options.map((option, index) => [
+//         { text: he.decode(option), callback_data: `answer_${index}` },
+//       ]);
+//       break;
+
+//     case "round_summary":
+//       const prevRoundNumber = game.currentRound;
+//       const prevQuestion = game.questions[prevRoundNumber - 1];
+//       let summaryProgress = Object.values(game.players)
+//         .map((p) => {
+//           const progressBar = createProgressBar(p);
+//           return `*${p.name}* (${p.score} امتیاز)\n${progressBar}`;
+//         })
+//         .join("\n\n");
+//       text = `${header}*پایان دور ${prevRoundNumber}* 🏁\n\nپاسخ صحیح: *${he.decode(
+//         prevQuestion.correct_answer
+//       )}*\n\n------------------------------------\n${summaryProgress}`;
+//       break;
+
+//     case "finished":
+//       let finalScores = `${header}*بازی تمام شد!* 🏆\n\n*نتایج نهایی:*\n\n`;
+//       const sortedPlayers = Object.values(game.players).sort(
+//         (a, b) => b.score - a.score
+//       );
+//       const highScore = sortedPlayers.length > 0 ? sortedPlayers[0].score : 0;
+//       sortedPlayers.forEach((player, index) => {
+//         let medal = "";
+//         if (index === 0 && highScore > 0) medal = "🥇";
+//         else if (index === 1 && highScore > 0) medal = "🥈";
+//         else if (index === 2 && highScore > 0) medal = "🥉";
+//         else medal = "▫️";
+
+//         finalScores += `${medal} *${player.name}: ${player.score} امتیاز*\n\n`;
+//       });
+//       text = finalScores;
+//       keyboard = [[{ text: "🎮 بازی جدید", callback_data: "new_game_button" }]];
+//       break;
+//   }
+
+//   if (
+//     text &&
+//     (text !== game.lastMessageText ||
+//       JSON.stringify(keyboard) !== JSON.stringify(game.lastKeyboard))
+//   ) {
+//     bot
+//       .editMessageText(text, {
+//         chat_id: chatId,
+//         message_id: game.gameMessageId,
+//         parse_mode: "Markdown",
+//         reply_markup: { inline_keyboard: keyboard },
+//       })
+//       .catch((err) => {
+//         if (!err.message.includes("message is not modified")) {
+//           console.error("Telegram API Error:", err.message);
+//         }
+//       });
+//     game.lastMessageText = text;
+//     game.lastKeyboard = keyboard;
+//   }
+// }
+
+// bot.onText(/\/start/, (msg) => {
+//   const chatId = msg.chat.id;
+//   const options = {};
+
+//   if (msg.is_topic_message) {
+//     options.message_thread_id = msg.message_thread_id;
+//   }
+
+//   bot.sendMessage(
+//     chatId,
+//     "سلام! برای شروع یک بازی جدید در گروه، از دستور /newgame استفاده کنید.",
+//     options
+//   );
+// });
+
+// bot.onText(/\/newgame/, async (msg) => {
+//   const options = {};
+//   if (msg.is_topic_message) {
+//     options.message_thread_id = msg.message_thread_id;
+//   }
+//   if (msg.chat.type === "private") {
+//     return bot.sendMessage(
+//       msg.chat.id,
+//       "این بازی فقط در گروه‌ها قابل اجراست!",
+//       options
+//     );
+//   }
+//   createNewGame(msg.chat.id, msg.from, options);
+// });
+
+// bot.on("callback_query", async (callbackQuery) => {
+//   const { message, from, data } = callbackQuery;
+//   const chatId = message.chat.id;
+//   const userId = from.id;
+
+//   bot.answerCallbackQuery(callbackQuery.id);
+
+//   let game = games[chatId];
+
+//   if (data === "new_game_button") {
+//     const options = {};
+//     if (game && game.threadId) {
+//       options.message_thread_id = game.threadId;
+//     }
+//     createNewGame(chatId, from, options);
+//     return;
+//   }
+
+//   if (!game || message.message_id !== game.gameMessageId) {
+//     return;
+//   }
+
+//   let action, value;
+//   const firstUnderscoreIndex = data.indexOf("_");
+
+//   if (firstUnderscoreIndex !== -1) {
+//     action = data.substring(0, firstUnderscoreIndex);
+//     value = data.substring(firstUnderscoreIndex + 1);
+//   } else {
+//     action = data;
+//     value = "";
+//   }
+
+//   if (action === "cfg" && userId !== game.creatorId) {
+//     return;
+//   }
+
+//   if (action === "cfg") {
+//     const type = value.split("_")[0];
+//     const val = value.substring(type.length + 1);
+
+//     if (type === "category") {
+//       if (val === "english_language") {
+//         game.state = "configuring_subcategory";
+//       } else {
+//         game.settings.category = val;
+//         game.state = "configuring_rounds";
+//       }
+//     } else if (type === "rounds") {
+//       game.settings.rounds = parseInt(val, 10);
+//       game.state = "configuring_timer";
+//     } else if (type === "timer") {
+//       game.settings.timer = parseInt(val, 10);
+//       game.state = "lobby";
+//     } else if (type === "back" && val === "main") {
+//       game.state = "configuring_category";
+//     }
+//     updateGameMessage(chatId);
+//     return;
+//   }
+
+//   switch (action) {
+//     case "join":
+//       if (game.state !== "lobby") return;
+//       if (!game.players[userId]) {
+//         game.players[userId] = { id: userId, name: from.first_name, score: 0 };
+//         updateGameMessage(chatId);
+//       }
+//       break;
+
+//     case "start":
+//       if (userId !== game.creatorId) return;
+//       if (game.state !== "lobby") return;
+
+//       if (Object.keys(game.players).length === 0) {
+//         game.players[userId] = { id: userId, name: from.first_name, score: 0 };
+//       }
+
+//       fetchQuestionsAndStart(chatId);
+//       break;
+
+//     case "answer":
+//       if (
+//         game.state !== "in_progress" ||
+//         !game.players[userId] ||
+//         (game.answers[game.currentRound] &&
+//           game.answers[game.currentRound][userId])
+//       )
+//         return;
+
+//       const currentQuestion = game.questions[game.currentRound - 1];
+
+//       const chosenOptionIndex = parseInt(value, 10);
+//       const chosenOptionText = currentQuestion.options[chosenOptionIndex];
+//       const isCorrect = chosenOptionText === currentQuestion.correct_answer;
+
+//       if (isCorrect) game.players[userId].score++;
+
+//       game.answers[game.currentRound][userId] = {
+//         answer: chosenOptionText,
+//         isCorrect: isCorrect,
+//       };
+
+//       updateGameMessage(chatId);
+
+//       if (
+//         Object.keys(game.answers[game.currentRound]).length ===
+//         Object.keys(game.players).length
+//       ) {
+//         clearTimeout(game.timerId);
+//         endRound(chatId);
+//       }
+//       break;
+//   }
+// });
+
+// function fetchQuestionsAndStart(chatId) {
+//   const game = games[chatId];
+//   const { rounds, category } = game.settings;
+
+//   let deckInfo = questionDecks[category];
+
+//   if (deckInfo.deck.length < rounds) {
+//     console.log(`Reshuffling all questions for category: ${category}`);
+//     deckInfo.deck = [...deckInfo.deck, ...deckInfo.discardPile].sort(
+//       () => 0.5 - Math.random()
+//     );
+//     deckInfo.discardPile = [];
+//   }
+
+//   const questionsToPlay = Math.min(rounds, deckInfo.deck.length);
+//   if (questionsToPlay === 0) {
+//     const options = game.threadId ? { message_thread_id: game.threadId } : {};
+//     const categoryDisplayName = game.settings.category.startsWith(
+//       "english_language_"
+//     )
+//       ? `زبان انگلیسی (${englishSubCategories[game.settings.category]})`
+//       : allCategories[game.settings.category];
+//     bot.sendMessage(
+//       chatId,
+//       `سوالی در دسته‌بندی «${categoryDisplayName}» باقی نمانده است! بازی لغو شد.`,
+//       options
+//     );
+//     delete games[chatId];
+//     return;
+//   }
+
+//   const selectedQuestions = deckInfo.deck.splice(0, questionsToPlay);
+//   deckInfo.discardPile.push(...selectedQuestions);
+
+//   game.questions = selectedQuestions.map((q) => ({
+//     question: q.question,
+//     correct_answer: q.correct_answer,
+//     options: [...q.options].sort(() => Math.random() - 0.5),
+//   }));
+
+//   game.settings.rounds = questionsToPlay;
+//   game.currentRound = 0;
+//   for (let i = 1; i <= questionsToPlay; i++) {
+//     game.answers[i] = {};
+//   }
+//   startNextRound(chatId);
+// }
+
+// function endRound(chatId) {
+//   const game = games[chatId];
+//   if (!game) return;
+
+//   game.state = "round_summary";
+//   updateGameMessage(chatId);
+
+//   if (game.currentRound >= game.settings.rounds) {
+//     setTimeout(() => {
+//       if (!games[chatId]) return;
+//       game.state = "finished";
+//       updateGameMessage(chatId);
+//     }, 5000);
+//   } else {
+//     setTimeout(() => {
+//       if (!games[chatId]) return;
+//       startNextRound(chatId);
+//     }, 5000);
+//   }
+// }
+
+// function startNextRound(chatId) {
+//   const game = games[chatId];
+//   if (!game) return;
+
+//   game.currentRound++;
+//   game.state = "in_progress";
+//   updateGameMessage(chatId);
+
+//   game.timerId = setTimeout(() => {
+//     if (games[chatId] && games[chatId].state === "in_progress") {
+//       endRound(chatId);
+//     }
+//   }, game.settings.timer * 1000);
+// }
+
+// bot.onText(/\/cancelgame/, async (msg) => {
+//   const chatId = msg.chat.id;
+//   const game = games[chatId];
+//   const options = {};
+//   if (msg.is_topic_message) {
+//     options.message_thread_id = msg.message_thread_id;
+//   }
+
+//   if (!game)
+//     return bot.sendMessage(
+//       chatId,
+//       "هیچ بازی فعالی برای لغو وجود ندارد.",
+//       options
+//     );
+
+//   try {
+//     const admins = await bot.getChatAdministrators(chatId);
+//     const isAdmin = admins.some((admin) => admin.user.id === msg.from.id);
+
+//     if (msg.from.id === game.creatorId || isAdmin) {
+//       if (game.timerId) clearTimeout(game.timerId);
+//       bot.deleteMessage(chatId, game.gameMessageId).catch(() => {});
+//       delete games[chatId];
+//       bot.sendMessage(
+//         chatId,
+//         "✅ بازی فعال توسط سازنده یا ادمین لغو شد.",
+//         options
+//       );
+//     } else {
+//       bot.sendMessage(
+//         chatId,
+//         "❌ فقط سازنده بازی یا ادمین‌های گروه می‌توانند بازی را لغو کنند.",
+//         options
+//       );
+//     }
+//   } catch (error) {
+//     if (msg.from.id === game.creatorId) {
+//       if (game.timerId) clearTimeout(game.timerId);
+//       bot.deleteMessage(chatId, game.gameMessageId).catch(() => {});
+//       delete games[chatId];
+//       bot.sendMessage(chatId, "✅ بازی فعال توسط سازنده لغو شد.", options);
+//     } else {
+//       bot.sendMessage(
+//         chatId,
+//         "❌ فقط سازنده بازی می‌تواند آن را لغو کند.",
+//         options
+//       );
+//     }
+//   }
+// });
+
+// console.log("ربات کوییز با موفقیت روشن شد!");
+
+
+
+
+
+
+
+
+
+
+
+
 const TelegramBot = require("node-telegram-bot-api");
 const he = require("he");
+const { translate } = require("@vitalets/google-translate-api");
+const axios = require("axios");
 
 // 🔑 توکن ربات شما
 const token = process.env.BOT_TOKEN;
@@ -796,7 +1399,6 @@ let questionDecks = {};
 let allCategories = {};
 let englishSubCategories = {};
 
-// آبجکت برای نگهداری آیکون‌های هر دسته
 const categoryIcons = {
   general_knowledge: "🌍",
   history: "📜",
@@ -809,7 +1411,6 @@ const categoryIcons = {
   math_fun: "🎲",
 };
 
-// آبجکت برای آیکون‌های زیرشاخه‌های زبان
 const englishSubCategoryIcons = {
   vocabulary: "📖",
   grammar: "✒️",
@@ -1099,7 +1700,7 @@ bot.onText(/\/start/, (msg) => {
 
   bot.sendMessage(
     chatId,
-    "سلام! برای شروع یک بازی جدید در گروه، از دستور /newgame استفاده کنید.",
+    "سلام! برای شروع یک بازی جدید در گروه، از دستور /newgame استفاده کنید. برای ترجمه کلمات انگلیسی از /translate word استفاده کنید.",
     options
   );
 });
@@ -1370,368 +1971,55 @@ bot.onText(/\/cancelgame/, async (msg) => {
   }
 });
 
+// ✅ کد جدید برای دستور /translate
+bot.onText(/\/translate (.+)/, async (msg, match) => {
+  const chatId = msg.chat.id;
+  const wordToTranslate = match[1];
+
+  const options = {};
+  if (msg.is_topic_message) {
+    options.message_thread_id = msg.message_thread_id;
+  }
+
+  try {
+    // 1. ترجمه کلمه
+    const translationResult = await translate(wordToTranslate, { to: "fa" });
+    const translatedText = translationResult.text;
+
+    const messageText = `📖 ترجمه *${he.decode(
+      wordToTranslate
+    )}*:\n\n🇮🇷 *${he.decode(translatedText)}*`;
+    bot.sendMessage(chatId, messageText, {
+      ...options,
+      parse_mode: "Markdown",
+    });
+
+    // 2. دریافت تلفظ
+    const ttsUrl = `https://translate.google.com/translate_tts?ie=UTF-8&client=tw-ob&q=${encodeURIComponent(
+      wordToTranslate
+    )}&tl=en`;
+
+    const response = await axios({
+      method: "get",
+      url: ttsUrl,
+      responseType: "stream",
+    });
+
+    // 3. ارسال صوت
+    const caption = `🔊 تلفظ *${he.decode(wordToTranslate)}*`;
+    bot.sendAudio(chatId, response.data, {
+      ...options,
+      caption: caption,
+      parse_mode: "Markdown",
+    });
+  } catch (error) {
+    console.error("Translate command error:", error.message);
+    bot.sendMessage(
+      chatId,
+      "متاسفانه در ترجمه یا دریافت تلفظ مشکلی پیش آمد. لطفاً کلمه انگلیسی را به درستی وارد کنید.",
+      options
+    );
+  }
+});
+
 console.log("ربات کوییز با موفقیت روشن شد!");
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-// const TelegramBot = require("node-telegram-bot-api");
-// const he = require("he");
-
-// // ✅ تغییر ۱: سوالات از فایل محلی خوانده می‌شوند
-// const allQuestionsByCategory = require("./questions.json");
-
-// // 🔑 توکن ربات خود را اینجا قرار دهید
-// const token = "8024875280:AAGv3q8X8uO3BkYmNURLZnHTFoaJhOoTfQY";
-
-// const bot = new TelegramBot(token, { polling: true });
-
-// let games = {};
-
-// // ✅ تغییر ۲: دسته‌بندی‌ها به صورت خودکار از فایل خوانده می‌شوند
-// const CATEGORIES = Object.keys(allQuestionsByCategory);
-// const ROUNDS = [5, 10, 15];
-// const TIMERS = [15, 20, 30];
-
-// // منطق "دسته کارت" برای جلوگیری از سوالات تکراری
-// let questionDecks = {};
-// function initializeDecks() {
-//   console.log("Initializing and shuffling the local question deck...");
-//   for (const category in allQuestionsByCategory) {
-//     questionDecks[category] = {
-//       deck: [...allQuestionsByCategory[category]].sort(
-//         () => 0.5 - Math.random()
-//       ),
-//       discardPile: [],
-//     };
-//   }
-//   console.log("Decks initialized successfully.");
-// }
-// initializeDecks();
-
-// // =================================================================================================
-// // 🎨 تابع اصلی UI (بدون تغییر) 🎨
-// // =================================================================================================
-// function updateGameMessage(chatId) {
-//   const game = games[chatId];
-//   if (!game || !game.gameMessageId) return;
-
-//   let text = "";
-//   let keyboard = [];
-
-//   const createProgressBar = (player) => {
-//     let bar = "";
-//     const totalRounds = game.settings.rounds;
-//     for (let i = 1; i <= totalRounds; i++) {
-//       const answer = game.answers[i] ? game.answers[i][player.id] : undefined;
-//       if (
-//         i > game.currentRound ||
-//         (game.state === "in_progress" && i === game.currentRound && !answer)
-//       ) {
-//         bar += "⚪️";
-//       } else if (answer === undefined) {
-//         bar += "❔";
-//       } else {
-//         bar += answer.isCorrect ? "✅" : "❌";
-//       }
-//     }
-//     return bar;
-//   };
-
-//   const header =
-//     "👑 **بازی کوئیز فارسی** 👑\n------------------------------------\n";
-
-//   switch (game.state) {
-//     case "configuring_category":
-//       text = `${header}⚙️ *مرحله ۱ از ۳: تنظیمات*\nلطفاً موضوع بازی را انتخاب کنید:`;
-//       // ✅ تغییر ۳: دکمه‌ها از دسته‌بندی‌های فایل JSON ساخته می‌شوند
-//       let categoryKeyboard = CATEGORIES.map((name) => ({
-//         text: `📚 ${name}`,
-//         callback_data: `cfg_category_${name}`,
-//       }));
-//       keyboard = categoryKeyboard.map((btn) => [btn]);
-//       break;
-//     case "configuring_rounds":
-//       text = `${header}⚙️ *مرحله ۲ از ۳: تنظیمات*\nتعداد سوالات برای موضوع «${game.settings.category}» را انتخاب کنید:`;
-//       keyboard = [
-//         ROUNDS.map((r) => ({
-//           text: `🔢 ${r} سوال`,
-//           callback_data: `cfg_rounds_${r}`,
-//         })),
-//       ];
-//       break;
-//     case "configuring_timer":
-//       text = `${header}⚙️ *مرحله ۳ از ۳: تنظیمات*\nزمان هر سوال را انتخاب کنید:`;
-//       keyboard = [
-//         TIMERS.map((t) => ({
-//           text: `⏱️ ${t} ثانیه`,
-//           callback_data: `cfg_timer_${t}`,
-//         })),
-//       ];
-//       break;
-//     case "lobby":
-//       let playerList = Object.values(game.players)
-//         .map((p) => `▪️ ${p.name}`)
-//         .join("\n");
-//       if (!playerList) playerList = "_هنوز کسی ملحق نشده..._";
-//       text = `${header}📣 *لابی بازی آماده است!*\n\n📜 *موضوع:* ${game.settings.category}\n🔢 *تعداد سوالات:* ${game.settings.rounds}\n⏱️ *زمان هر سوال:* ${game.settings.timer} ثانیه\n\n👥 *بازیکنان حاضر:*\n${playerList}`;
-//       keyboard = [
-//         [{ text: "✅ من هم بازی می‌کنم", callback_data: "join" }],
-//         [{ text: "🚀 شروع بازی (فقط سازنده)", callback_data: "start" }],
-//       ];
-//       break;
-//     case "in_progress":
-//       const currentQuestion = game.questions[game.currentRound - 1];
-//       let playerProgress = Object.values(game.players)
-//         .map((p) => {
-//           const progressBar = createProgressBar(p);
-//           return `*${p.name}*\n${progressBar}   (${p.score} امتیاز)`;
-//         })
-//         .join("\n\n");
-//       text = `${header}❓ *سوال ${game.currentRound} از ${game.settings.rounds}*\n\n_${currentQuestion.question}_\n\n------------------------------------\n${playerProgress}`;
-//       keyboard = currentQuestion.options.map((option) => [
-//         { text: he.decode(option), callback_data: `answer_${option}` },
-//       ]);
-//       break;
-//     case "round_summary":
-//       const prevQuestion = game.questions[game.currentRound - 1];
-//       let summaryProgress = Object.values(game.players)
-//         .map((p) => {
-//           const progressBar = createProgressBar(p);
-//           return `*${p.name}*\n${progressBar}   (${p.score} امتیاز)`;
-//         })
-//         .join("\n\n");
-//       text = `${header}✔️ *نتایج دور ${game.currentRound}*\n\nپاسخ صحیح: *${prevQuestion.correct_answer}*\n\n------------------------------------\n${summaryProgress}`;
-//       break;
-//     case "finished":
-//       let finalScores = `${header}🎉🏆 *بازی تمام شد! نتایج نهایی* 🏆🎉\n\n`;
-//       const sortedPlayers = Object.values(game.players).sort(
-//         (a, b) => b.score - a.score
-//       );
-//       const highScore = sortedPlayers.length > 0 ? sortedPlayers[0].score : 0;
-//       sortedPlayers.forEach((player) => {
-//         const medal = player.score === highScore && highScore > 0 ? "🥇" : "▫️";
-//         const progressBar = createProgressBar(player);
-//         finalScores += `*${medal} ${player.name}: ${player.score} امتیاز*\n${progressBar}\n\n`;
-//       });
-//       text = finalScores;
-//       break;
-//   }
-//   bot
-//     .editMessageText(text, {
-//       chat_id: chatId,
-//       message_id: game.gameMessageId,
-//       parse_mode: "Markdown",
-//       reply_markup: { inline_keyboard: keyboard },
-//     })
-//     .catch(() => {});
-// }
-
-// // --- Event Handlers (بخش اصلی منطق ربات) ---
-
-// bot.onText(/\/newgame/, async (msg) => {
-//   const chatId = msg.chat.id;
-//   if (msg.chat.type === "private")
-//     return bot.sendMessage(chatId, "این بازی فقط در گروه‌ها قابل اجراست!");
-//   if (games[chatId] && games[chatId].state !== "finished")
-//     return bot.sendMessage(
-//       chatId,
-//       "یک بازی فعال است. برای لغو از /cancelgame استفاده کنید."
-//     );
-
-//   const gameMessage = await bot.sendMessage(chatId, "در حال ساخت بازی جدید...");
-//   games[chatId] = {
-//     state: "configuring_category",
-//     creatorId: msg.from.id,
-//     creatorName: msg.from.first_name,
-//     gameMessageId: gameMessage.message_id,
-//     players: {},
-//     settings: {},
-//     answers: {},
-//   };
-//   updateGameMessage(chatId);
-// });
-
-// bot.on("callback_query", async (callbackQuery) => {
-//   const { message, from, data } = callbackQuery;
-//   const chatId = message.chat.id;
-//   const userId = from.id;
-//   let game = games[chatId];
-//   if (!game || message.message_id !== game.gameMessageId)
-//     return bot.answerCallbackQuery(callbackQuery.id);
-//   const action = data.split("_")[0];
-//   const value = data.substring(action.length + 1);
-//   if (action === "cfg" && userId !== game.creatorId)
-//     return bot.answerCallbackQuery(callbackQuery.id, {
-//       text: "فقط سازنده می‌تواند تنظیمات را تغییر دهد.",
-//     });
-
-//   if (action === "cfg") {
-//     const [type, val] = value.split(/_(.+)/); // Split only on the first underscore
-//     if (type === "category") {
-//       game.settings.category = val;
-//       game.state = "configuring_rounds";
-//     }
-//     if (type === "rounds") {
-//       game.settings.rounds = parseInt(val, 10);
-//       game.state = "configuring_timer";
-//     }
-//     if (type === "timer") {
-//       game.settings.timer = parseInt(val, 10);
-//       game.state = "lobby";
-//     }
-//     updateGameMessage(chatId);
-//     return;
-//   }
-
-//   switch (action) {
-//     case "join":
-//       if (game.state !== "lobby") return;
-//       if (!game.players[userId]) {
-//         game.players[userId] = { id: userId, name: from.first_name, score: 0 };
-//         bot.answerCallbackQuery(callbackQuery.id, {
-//           text: "شما به بازی ملحق شدید!",
-//         });
-//         updateGameMessage(chatId);
-//       } else {
-//         bot.answerCallbackQuery(callbackQuery.id, {
-//           text: "شما از قبل در بازی هستید.",
-//         });
-//       }
-//       break;
-//     case "start":
-//       if (userId !== game.creatorId || game.state !== "lobby") return;
-//       if (!game.players[userId]) {
-//         game.players[userId] = { id: userId, name: from.first_name, score: 0 };
-//       }
-//       if (Object.keys(game.players).length === 0)
-//         return bot.answerCallbackQuery(callbackQuery.id, {
-//           text: "حداقل یک بازیکن نیاز است!",
-//         });
-//       fetchQuestionsAndStart(chatId);
-//       break;
-//     case "answer":
-//       if (
-//         game.state !== "in_progress" ||
-//         !game.players[userId] ||
-//         (game.answers[game.currentRound] &&
-//           game.answers[game.currentRound][userId])
-//       )
-//         return bot.answerCallbackQuery(callbackQuery.id, {
-//           text: "شما قبلاً پاسخ داده‌اید.",
-//         });
-//       const currentQuestion = game.questions[game.currentRound - 1];
-//       const isCorrect = value === currentQuestion.correct_answer;
-//       if (isCorrect) game.players[userId].score++;
-//       game.answers[game.currentRound][userId] = {
-//         answer: value,
-//         isCorrect: isCorrect,
-//       };
-//       bot.answerCallbackQuery(callbackQuery.id, { text: "پاسخ شما ثبت شد!" });
-//       updateGameMessage(chatId);
-//       if (
-//         Object.keys(game.answers[game.currentRound]).length ===
-//         Object.keys(game.players).length
-//       ) {
-//         clearTimeout(game.timerId);
-//         nextRound(chatId);
-//       }
-//       break;
-//   }
-// });
-
-// // ✅ تغییر ۴: این تابع حالا از دسته کارت‌های محلی استفاده می‌کند
-// function fetchQuestionsAndStart(chatId) {
-//   const game = games[chatId];
-//   const { rounds, category } = game.settings;
-
-//   let categoryDeck = questionDecks[category].deck;
-//   let categoryDiscard = questionDecks[category].discardPile;
-
-//   if (categoryDeck.length < rounds) {
-//     categoryDeck.push(...categoryDiscard.sort(() => 0.5 - Math.random()));
-//     questionDecks[category].discardPile = [];
-//   }
-
-//   const questionsToPlay = Math.min(rounds, categoryDeck.length);
-//   if (questionsToPlay === 0) {
-//     bot.sendMessage(
-//       chatId,
-//       `سوالی در دسته‌بندی «${category}» باقی نمانده است! بازی لغو شد.`
-//     );
-//     delete games[chatId];
-//     return;
-//   }
-
-//   const selectedQuestions = categoryDeck.splice(0, questionsToPlay);
-//   categoryDiscard.push(...selectedQuestions);
-
-//   game.questions = selectedQuestions.map((q) => ({
-//     question: q.question,
-//     correct_answer: q.correctAnswer,
-//     options: [...q.options].sort(() => Math.random() - 0.5),
-//   }));
-//   game.settings.rounds = questionsToPlay;
-//   game.currentRound = 0;
-//   for (let i = 1; i <= questionsToPlay; i++) {
-//     game.answers[i] = {};
-//   }
-//   nextRound(chatId);
-// }
-
-// function nextRound(chatId) {
-//   const game = games[chatId];
-//   if (!game) return;
-//   if (game.currentRound > 0) {
-//     game.state = "round_summary";
-//     updateGameMessage(chatId);
-//   }
-//   if (game.currentRound >= game.settings.rounds) {
-//     setTimeout(() => {
-//       if (!games[chatId]) return;
-//       game.state = "finished";
-//       updateGameMessage(chatId);
-//     }, 5000);
-//     return;
-//   }
-//   const delay = game.currentRound > 0 ? 5000 : 1000;
-//   setTimeout(() => {
-//     if (!games[chatId]) return;
-//     game.currentRound++;
-//     game.state = "in_progress";
-//     updateGameMessage(chatId);
-//     game.timerId = setTimeout(() => {
-//       if (games[chatId] && games[chatId].state === "in_progress") {
-//         nextRound(chatId);
-//       }
-//     }, game.settings.timer * 1000);
-//   }, delay);
-// }
-
-// // --- دستورات کمکی ---
-// bot.onText(/\/start/, (msg) =>
-//   bot.sendMessage(
-//     msg.chat.id,
-//     "برای شروع بازی در گروه از /newgame استفاده کنید."
-//   )
-// );
-// bot.onText(/\/cancelgame/, (msg) => {
-//   const game = games[msg.chat.id];
-//   if (game && msg.from.id === game.creatorId) {
-//     if (game.timerId) clearTimeout(game.timerId);
-//     delete games[msg.chat.id];
-//     bot.sendMessage(msg.chat.id, "✅ بازی فعال لغو شد.");
-//   }
-// });
-
-// console.log("ربات کوئیز فارسی (پایدار) با موفقیت روشن شد!");
