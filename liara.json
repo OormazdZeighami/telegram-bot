@@ -1,0 +1,5 @@
+{
+  "platform": "node",
+  "app-name": "my-telegram-bot",
+  "port": 3005
+}
