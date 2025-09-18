@@ -1,0 +1,253 @@
+[
+  {
+    "question": "Which word means 'طوفان'?",
+    "correct_answer": "Storm",
+    "options": ["Fog", "Storm", "Rain", "Snow"]
+  },
+  {
+    "question": "What is the antonym of 'Hot temperature'?",
+    "correct_answer": "Cold",
+    "options": ["Warm", "Cold", "Humid", "Foggy"]
+  },
+  {
+    "question": "Which season comes after Spring?",
+    "correct_answer": "Summer",
+    "options": ["Fall", "Summer", "Winter", "Spring"]
+  },
+  {
+    "question": "Which word is a synonym for 'Population'?",
+    "correct_answer": "People",
+    "options": ["City", "People", "Urban", "Evidence"]
+  },
+  {
+    "question": "What does 'Urgent' mean?",
+    "correct_answer": "Necessary",
+    "options": ["Calm", "Slow", "Necessary", "Optional"]
+  },
+  {
+    "question": "Which word is closest in meaning to 'Victorious'?",
+    "correct_answer": "Winner",
+    "options": ["Loser", "Winner", "Defeat", "Sad"]
+  },
+  {
+    "question": "Which of these is a synonym for 'Foggy'?",
+    "correct_answer": "Misty",
+    "options": ["Clear", "Misty", "Bright", "Sunny"]
+  },
+  {
+    "question": "What is the opposite of 'Flexible'?",
+    "correct_answer": "Rigid",
+    "options": ["Soft", "Strong", "Rigid", "Elastic"]
+  },
+  {
+    "question": "Which word means 'مکان اقامت'?",
+    "correct_answer": "Accommodation",
+    "options": ["Souvenir", "Guide", "Accommodation", "Passport"]
+  },
+  {
+    "question": "Which word is an antonym for 'Confidence'?",
+    "correct_answer": "Insecurity",
+    "options": ["Hope", "Insecurity", "Motivation", "Joy"]
+  },
+  {
+    "question": "Which word is related to 'چمدان'?",
+    "correct_answer": "Luggage",
+    "options": ["Guide", "Tourist", "Luggage", "Souvenir"]
+  },
+  {
+    "question": "What does 'Forecast' mean?",
+    "correct_answer": "Weather prediction",
+    "options": ["Temperature", "Weather prediction", "Storm", "Fog"]
+  },
+  {
+    "question": "Which word is similar to 'Ephemeral'?",
+    "correct_answer": "Temporary",
+    "options": ["Eternal", "Permanent", "Temporary", "Lasting"]
+  },
+  {
+    "question": "What is the opposite of 'Generosity'?",
+    "correct_answer": "Selfishness",
+    "options": ["Selfishness", "Kindness", "Warmth", "Caring"]
+  },
+  {
+    "question": "Which word refers to 'مسجد'?",
+    "correct_answer": "Mosque",
+    "options": ["Church", "Mosque", "Library", "University"]
+  },
+  {
+    "question": "Which word is a synonym of 'Journey'?",
+    "correct_answer": "Trip",
+    "options": ["Stay", "Trip", "Home", "City"]
+  },
+  {
+    "question": "Which word is closest in meaning to 'Revenge'?",
+    "correct_answer": "Payback",
+    "options": ["Mercy", "Forgiveness", "Payback", "Peace"]
+  },
+  {
+    "question": "What does 'Obey' mean?",
+    "correct_answer": "Follow",
+    "options": ["Reject", "Refuse", "Follow", "Confess"]
+  },
+  {
+    "question": "Which of these is an antonym of 'Peaceful'?",
+    "correct_answer": "Violent",
+    "options": ["Calm", "Violent", "Silent", "Quiet"]
+  },
+  {
+    "question": "Which word means 'بندر'?",
+    "correct_answer": "Port",
+    "options": ["Poet", "Port", "Talent", "Disease"]
+  },
+  {
+    "question": "Which word is a synonym for 'Treasure'?",
+    "correct_answer": "Wealth",
+    "options": ["Wealth", "Spy", "Advisor", "Pilgrimage"]
+  },
+  {
+    "question": "What is the opposite of 'Humid'?",
+    "correct_answer": "Dry",
+    "options": ["Wet", "Dry", "Foggy", "Stormy"]
+  },
+  {
+    "question": "Which word is related to 'کتابخانه'?",
+    "correct_answer": "Library",
+    "options": ["Hotel", "Library", "Mall", "Studio"]
+  },
+  {
+    "question": "Which word is closest in meaning to 'Motivation'?",
+    "correct_answer": "Incentive",
+    "options": ["Fear", "Incentive", "Loneliness", "Anger"]
+  },
+  {
+    "question": "Which word means 'مکانیک'?",
+    "correct_answer": "Mechanic",
+    "options": ["Fuel", "Mechanic", "Windshield", "Brake"]
+  },
+  {
+    "question": "Which is a synonym for 'Caring'?",
+    "correct_answer": "Compassionate",
+    "options": ["Selfish", "Compassionate", "Angry", "Cold"]
+  },
+  {
+    "question": "Which word is the antonym of 'Light'?",
+    "correct_answer": "Darkness",
+    "options": ["Darkness", "Shame", "Hope", "Joy"]
+  },
+
+  {
+    "question": "Which word is a synonym for 'Journey' in the sea?",
+    "correct_answer": "Voyage",
+    "options": ["Journey", "Voyage", "Migration", "Flight"]
+  },
+  {
+    "question": "Which word is the antonym of 'Friendship'?",
+    "correct_answer": "Enmity",
+    "options": ["Enmity", "Peace", "Trust", "Kindness"]
+  },
+  {
+    "question": "Which of these means 'یورش'?",
+    "correct_answer": "Raid",
+    "options": ["Victory", "Battle", "Raid", "Journey"]
+  },
+  {
+    "question": "Which word is related to 'عجیب'?",
+    "correct_answer": "Strange",
+    "options": ["Offer", "Interpret", "Strange", "Dream"]
+  },
+  {
+    "question": "What does 'Compete' mean?",
+    "correct_answer": "Take part in a contest",
+    "options": ["Win", "Lose", "Take part in a contest", "Observe"]
+  },
+  {
+    "question": "Which word is closest in meaning to 'Justice'?",
+    "correct_answer": "Fairness",
+    "options": ["Defeat", "Fairness", "Peace", "Pride"]
+  },
+  {
+    "question": "Which word is the opposite of 'Hope'?",
+    "correct_answer": "Despair",
+    "options": ["Joy", "Despair", "Surprise", "Confidence"]
+  },
+  {
+    "question": "Which word means 'پرده'?",
+    "correct_answer": "Curtains",
+    "options": ["Blinds", "Carpet", "Curtains", "Iron"]
+  },
+  {
+    "question": "Which of these is a synonym for 'Poet'?",
+    "correct_answer": "Writer of poems",
+    "options": ["Leader", "Writer of poems", "Singer", "Painter"]
+  },
+  {
+    "question": "Which word refers to 'شاعر'?",
+    "correct_answer": "Poet",
+    "options": ["Poet", "Port", "Talent", "Disease"]
+  },
+  {
+    "question": "What is a synonym for 'Souvenir'?",
+    "correct_answer": "Memento",
+    "options": ["Gift", "Memento", "Guide", "Ticket"]
+  },
+  {
+    "question": "Which word is the opposite of 'Improve'?",
+    "correct_answer": "Worsen",
+    "options": ["Balance", "Worsen", "Support", "Focus"]
+  },
+  {
+    "question": "Which word means 'چالش'?",
+    "correct_answer": "Challenge",
+    "options": ["Support", "Improve", "Challenge", "Explore"]
+  },
+  {
+    "question": "Which is closest in meaning to 'Attraction'?",
+    "correct_answer": "Appeal",
+    "options": ["Souvenir", "Appeal", "Guide", "Accommodation"]
+  },
+  {
+    "question": "Which is the antonym of 'Confidence'?",
+    "correct_answer": "Doubt",
+    "options": ["Hope", "Doubt", "Motivation", "Courage"]
+  },
+  {
+    "question": "Which word refers to 'مرگبار، زیان‌آور'?",
+    "correct_answer": "Pernicious",
+    "options": ["Mellifluous", "Ephemeral", "Pernicious", "Obdurate"]
+  },
+  {
+    "question": "Which word is the antonym of 'Benevolent'?",
+    "correct_answer": "Malicious",
+    "options": ["Kind", "Generous", "Malicious", "Friendly"]
+  },
+  {
+    "question": "Which word means 'اراده'?",
+    "correct_answer": "Will",
+    "options": ["Future", "Will", "Decide", "Voyage"]
+  },
+  {
+    "question": "Which word is the opposite of 'Kindness'?",
+    "correct_answer": "Cruelty",
+    "options": ["Cruelty", "Compassion", "Sympathy", "Warmth"]
+  },
+  {
+    "question": "Which word is related to 'University'?",
+    "correct_answer": "Education",
+    "options": ["Education", "Airport", "Hotel", "Bakery"]
+  },
+  {
+    "question": "Which word means 'گنج'?",
+    "correct_answer": "Treasure",
+    "options": ["Spy", "Treasure", "Convert", "Friendship"]
+  },
+  {
+    "question": "Which is a synonym for 'Reveal'?",
+    "correct_answer": "Disclose",
+    "options": ["Hide", "Cover", "Disclose", "Pollute"]
+  },
+  {
+    "question": "Which word means 'سفر زیارتی'?",
+    "correct_answer": "Pilgrimage",
+    "options": ["Journey", "Pilgrimage", "Adventure", "Voyage"]
+  }
+]
