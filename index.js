@@ -1390,7 +1390,7 @@
 
 // // 🔑 توکن ربات شما
 // // const token = process.env.BOT_TOKEN;
-// const token = "8024875280:AAGv3q8X8uO3BkYmNURLZnHTFoaJhOoTfQY";
+
 // const bot = new TelegramBot(token, { polling: true });
 
 // let games = {};
@@ -2049,7 +2049,7 @@ const path = require("path");
 
 // 🔑 توکن ربات شما
 const token = process.env.BOT_TOKEN;
-// const token = "8024875280:AAGv3q8X8uO3BkYmNURLZnHTFoaJhOoTfQY";
+
 const bot = new TelegramBot(token, { polling: true });
 
 // 📚 داده‌های بازی و آزمون
