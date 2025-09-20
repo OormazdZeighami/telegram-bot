@@ -2049,8 +2049,21 @@ const fs = require("fs");
 const path = require("path");
 
 // 🔑 توکن ربات شما
+<<<<<<< HEAD
 const token = process.env.BOT_TOKEN;
 const bot = new TelegramBot(token, { polling: true });
+=======
+const token = process.env.BOT_TOKEN || "8024875280:AAGv3q8X8uO3BkYmNURLZnHTFoaJhOoTfQY";
+const bot = new TelegramBot(token, { 
+  polling: {
+    interval: 2000,
+    autoStart: true,
+    params: {
+      timeout: 30
+    }
+  }
+});
+>>>>>>> f1af3c989e5034c93c74f0cc566a59953f1de2d3
 
 // 📚 داده‌های بازی و آزمون
 const RESULTS_FILE = path.join(__dirname, "quiz_results.json");
@@ -2443,7 +2456,7 @@ function startNextRound(chatId) {
 // 🎯 توابع و منطق آزمون انفرادی (Quizz)
 // ----------------------------------------------------
 
-bot.onText(/\/quizz/, (msg) => {
+bot.onText(/^\/quizz$/, (msg) => {
   const chatId = msg.chat.id;
   const userId = msg.from.id;
   const options = msg.is_topic_message
@@ -2472,7 +2485,7 @@ bot.onText(/\/quizz/, (msg) => {
   });
 });
 
-bot.onText(/\/cancelquizz/, (msg) => {
+bot.onText(/^\/cancelquizz$/, (msg) => {
   const chatId = msg.chat.id;
   const userId = msg.from.id;
   const options = msg.is_topic_message
@@ -2519,18 +2532,46 @@ async function sendQuizQuestion(chatId, userId) {
     session.questions.length
   }*\n\n*${questionText}*`;
 
-  const questionMessage = await bot.sendMessage(chatId, messageText, {
-    parse_mode: "Markdown",
-    reply_markup: { inline_keyboard: options },
-    message_thread_id:
-      games[chatId] && games[chatId].threadId
-        ? games[chatId].threadId
-        : undefined,
-  });
+  let questionMessage;
+  
+  // اگر پیام قبلی وجود دارد، آن را ویرایش کن
+  if (session.currentMessageId && session.currentQuestionIndex > 0) {
+    try {
+      await bot.editMessageText(messageText, {
+        chat_id: chatId,
+        message_id: session.currentMessageId,
+        parse_mode: "Markdown",
+        reply_markup: { inline_keyboard: options },
+      });
+      questionMessage = { message_id: session.currentMessageId };
+    } catch (error) {
+      // اگر ویرایش ناموفق بود، پیام جدید ارسال کن
+      questionMessage = await bot.sendMessage(chatId, messageText, {
+        parse_mode: "Markdown",
+        reply_markup: { inline_keyboard: options },
+        message_thread_id:
+          games[chatId] && games[chatId].threadId
+            ? games[chatId].threadId
+            : undefined,
+      });
+    }
+  } else {
+    // برای سوال اول، پیام جدید ارسال کن
+    questionMessage = await bot.sendMessage(chatId, messageText, {
+      parse_mode: "Markdown",
+      reply_markup: { inline_keyboard: options },
+      message_thread_id:
+        games[chatId] && games[chatId].threadId
+          ? games[chatId].threadId
+          : undefined,
+    });
+  }
 
   session.currentMessageId = questionMessage.message_id;
   session.timer = setTimeout(() => {
-    // Timeout logic
+    // Timeout logic - check if quiz is still active
+    if (!session || session.status !== "in_progress") return;
+    
     const questionToSave = session.questions[session.currentQuestionIndex];
     session.answers.push({
       question: questionToSave.question,
@@ -2565,6 +2606,7 @@ function endQuiz(chatId, userId) {
   // ذخیره‌سازی اطلاعات در فایل
   session.status = "finished";
   session.score = correctCount; // Update score for ranking
+  session.incorrectCount = incorrectCount; // Update incorrect count for consistency
   session.name = quizSessions[userId].name;
   quizSessions[userId] = session;
   saveQuizResults(quizSessions);
@@ -2574,7 +2616,7 @@ function endQuiz(chatId, userId) {
 // 🤖 مدیریت دستورات و Callback Query
 // ----------------------------------------------------
 
-bot.onText(/\/start/, (msg) => {
+bot.onText(/^\/start$/, (msg) => {
   const chatId = msg.chat.id;
   const options = msg.is_topic_message
     ? { message_thread_id: msg.message_thread_id }
@@ -2586,7 +2628,7 @@ bot.onText(/\/start/, (msg) => {
   );
 });
 
-bot.onText(/\/newgame/, async (msg) => {
+bot.onText(/^\/newgame$/, async (msg) => {
   const options = msg.is_topic_message
     ? { message_thread_id: msg.message_thread_id }
     : {};
@@ -2600,13 +2642,13 @@ bot.onText(/\/newgame/, async (msg) => {
   createNewGame(msg.chat.id, msg.from, options);
 });
 
-bot.onText(/\/cancelgame/, async (msg) => {
+bot.onText(/^\/cancelgame$/, async (msg) => {
   const chatId = msg.chat.id;
   const game = games[chatId];
   const options = msg.is_topic_message
     ? { message_thread_id: msg.message_thread_id }
     : {};
-  if (!game)
+  if (!game || game.state === "finished")
     return bot.sendMessage(
       chatId,
       "هیچ بازی فعالی برای لغو وجود ندارد.",
@@ -2647,7 +2689,7 @@ bot.onText(/\/cancelgame/, async (msg) => {
   }
 });
 
-bot.onText(/\/translate (.+)/, async (msg, match) => {
+bot.onText(/^\/translate (.+)$/, async (msg, match) => {
   const chatId = msg.chat.id;
   const wordToTranslate = match[1];
   const options = msg.is_topic_message
@@ -2741,14 +2783,16 @@ bot.on("callback_query", async (callbackQuery) => {
       }
 
       const sortedParticipants = finishedParticipants
-        .sort(([, a], [, b]) => b.correctCount - a.correctCount)
+        .sort(([, a], [, b]) => b.score - a.score)
         .slice(0, 10);
 
       let resultsText = "🏆 *نتایج آزمون زبان انگلیسی* 🏆\n\n";
       sortedParticipants.forEach(([id, session], index) => {
         const medal =
           index === 0 ? "🥇" : index === 1 ? "🥈" : index === 2 ? "🥉" : "▫️";
-        resultsText += `${medal} *${session.name}*: ${session.correctCount} ✅ / ${session.incorrectCount} ❌\n`;
+        const totalQuestions = session.answers.length;
+        const incorrectCount = totalQuestions - session.score;
+        resultsText += `${medal} *${session.name}*: ${session.score} ✅ / ${incorrectCount} ❌\n`;
       });
 
       bot.sendMessage(chatId, resultsText, {
@@ -2896,6 +2940,12 @@ bot.on("callback_query", async (callbackQuery) => {
       const chosenOptionIndex = parseInt(value, 10);
       const chosenOptionText = currentQuestion.options[chosenOptionIndex];
       const isCorrect = chosenOptionText === currentQuestion.correct_answer;
+      
+      // اطمینان از وجود game.answers[game.currentRound]
+      if (!game.answers[game.currentRound]) {
+        game.answers[game.currentRound] = {};
+      }
+      
       if (isCorrect) game.players[userId].score++;
       game.answers[game.currentRound][userId] = {
         answer: chosenOptionText,
@@ -2913,7 +2963,27 @@ bot.on("callback_query", async (callbackQuery) => {
   }
 });
 
-console.log("ربات کوییز با موفقیت روشن شد!");
+// مدیریت خطاهای عمومی
+process.on('uncaughtException', (error) => {
+  console.error('❌ خطای غیرمنتظره:', error.message);
+  // ذخیره بازی‌ها قبل از خروج
+  saveQuizResults(quizSessions);
+});
+
+process.on('unhandledRejection', (reason, promise) => {
+  console.error('❌ خطای Promise:', reason);
+});
+
+// مدیریت خطاهای تلگرام
+bot.on('polling_error', (error) => {
+  console.error('❌ خطای Polling:', error.message);
+});
+
+bot.on('error', (error) => {
+  console.error('❌ خطای بات:', error.message);
+});
+
+console.log("✅ ربات کوییز با موفقیت روشن شد!");
 
 // ✅ اضافه کردن دستورات به منوی ربات
 // این کد را فقط یک بار اجرا کنید و سپس می‌توانید آن را حذف کنید.
