@@ -2039,6 +2039,7 @@
 
 
 
+// const token = "8024875280:AAGv3q8X8uO3BkYmNURLZnHTFoaJhOoTfQY";
 
 const TelegramBot = require("node-telegram-bot-api");
 const he = require("he");
@@ -2049,7 +2050,6 @@ const path = require("path");
 
 // 🔑 توکن ربات شما
 const token = process.env.BOT_TOKEN;
-// const token = "8024875280:AAGv3q8X8uO3BkYmNURLZnHTFoaJhOoTfQY";
 const bot = new TelegramBot(token, { polling: true });
 
 // 📚 داده‌های بازی و آزمون
@@ -2108,7 +2108,7 @@ const englishSubCategoryIcons = {
   conversation: "💬",
   spelling: "✍️",
 };
-
+  
 function initializeDecks() {
   console.log("Initializing and shuffling the question decks...");
   for (const mainCategoryKey in allData) {
