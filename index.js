@@ -1,6 +1,6 @@
 // const TelegramBot = require("node-telegram-bot-api");
 
-
+// const token = "8024875280:AAGv3q8X8uO3BkYmNURLZnHTFoaJhOoTfQY"; // توکن واقعی خودت رو اینجا بگذار
 
 // const bot = new TelegramBot(token, {
 //   polling: true, // این خط برای فعال کردن حالت polling هست که ربات بتونه آپدیت‌ها رو دریافت کنه
@@ -24,7 +24,7 @@
 // const axios = require("axios");
 
 // // ❗️ توکن ربات خودت رو اینجا قرار بده
-
+// const token = "8024875280:AAGv3q8X8uO3BkYmNURLZnHTFoaJhOoTfQY";
 
 // // ❗️ کلید API رایگان خودت رو از سایت OpenWeatherMap بگیر و اینجا قرار بده
 // const weatherApiKey = "067af187004c63a200585053062965e4"; // <--- مهم! این قسمت رو باید پر کنی
@@ -78,7 +78,7 @@
 // const TelegramBot = require("node-telegram-bot-api");
 
 // // ❗️ توکن ربات خودت رو اینجا قرار بده
-
+// const token = "8024875280:AAGv3q8X8uO3BkYmNURLZnHTFoaJhOoTfQY";
 
 // const bot = new TelegramBot(token, { polling: true });
 
@@ -174,7 +174,7 @@
 // const axios = require("axios");
 
 // // ❗️ توکن ربات خودت رو اینجا قرار بده
-
+// const token = "8024875280:AAGv3q8X8uO3BkYmNURLZnHTFoaJhOoTfQY";
 
 // // ❗️ کلید API رایگانی که از سایت ExchangeRate-API.com گرفتی رو اینجا قرار بده
 // const exchangeApiKey = "127373a40d7805b5ef575b9d"; // <--- مهم! این قسمت رو باید پر کنی
@@ -287,7 +287,7 @@
 // const axios = require("axios");
 
 // // ❗️ توکن ربات خودت
-
+// const token = "8024875280:AAGv3q8X8uO3BkYmNURLZnHTFoaJhOoTfQY";
 
 // // ❗️ کلید API (v3) که از سایت themoviedb.org گرفتی
 // const tmdbApiKey = "73dbe770429c14b332057598d52f6fdf";
@@ -1390,7 +1390,7 @@
 
 // // 🔑 توکن ربات شما
 // // const token = process.env.BOT_TOKEN;
-
+// const token = "8024875280:AAGv3q8X8uO3BkYmNURLZnHTFoaJhOoTfQY";
 // const bot = new TelegramBot(token, { polling: true });
 
 // let games = {};
@@ -2048,9 +2048,16 @@ const fs = require("fs");
 const path = require("path");
 
 // 🔑 توکن ربات شما
-const token = process.env.BOT_TOKEN;
-
-const bot = new TelegramBot(token, { polling: true });
+const token = process.env.BOT_TOKEN || "8024875280:AAGv3q8X8uO3BkYmNURLZnHTFoaJhOoTfQY";
+const bot = new TelegramBot(token, { 
+  polling: {
+    interval: 1000,
+    autoStart: true,
+    params: {
+      timeout: 10
+    }
+  }
+});
 
 // 📚 داده‌های بازی و آزمون
 const RESULTS_FILE = path.join(__dirname, "quiz_results.json");
@@ -2519,18 +2526,46 @@ async function sendQuizQuestion(chatId, userId) {
     session.questions.length
   }*\n\n*${questionText}*`;
 
-  const questionMessage = await bot.sendMessage(chatId, messageText, {
-    parse_mode: "Markdown",
-    reply_markup: { inline_keyboard: options },
-    message_thread_id:
-      games[chatId] && games[chatId].threadId
-        ? games[chatId].threadId
-        : undefined,
-  });
+  let questionMessage;
+  
+  // اگر پیام قبلی وجود دارد، آن را ویرایش کن
+  if (session.currentMessageId && session.currentQuestionIndex > 0) {
+    try {
+      await bot.editMessageText(messageText, {
+        chat_id: chatId,
+        message_id: session.currentMessageId,
+        parse_mode: "Markdown",
+        reply_markup: { inline_keyboard: options },
+      });
+      questionMessage = { message_id: session.currentMessageId };
+    } catch (error) {
+      // اگر ویرایش ناموفق بود، پیام جدید ارسال کن
+      questionMessage = await bot.sendMessage(chatId, messageText, {
+        parse_mode: "Markdown",
+        reply_markup: { inline_keyboard: options },
+        message_thread_id:
+          games[chatId] && games[chatId].threadId
+            ? games[chatId].threadId
+            : undefined,
+      });
+    }
+  } else {
+    // برای سوال اول، پیام جدید ارسال کن
+    questionMessage = await bot.sendMessage(chatId, messageText, {
+      parse_mode: "Markdown",
+      reply_markup: { inline_keyboard: options },
+      message_thread_id:
+        games[chatId] && games[chatId].threadId
+          ? games[chatId].threadId
+          : undefined,
+    });
+  }
 
   session.currentMessageId = questionMessage.message_id;
   session.timer = setTimeout(() => {
-    // Timeout logic
+    // Timeout logic - check if quiz is still active
+    if (!session || session.status !== "in_progress") return;
+    
     const questionToSave = session.questions[session.currentQuestionIndex];
     session.answers.push({
       question: questionToSave.question,
@@ -2565,6 +2600,7 @@ function endQuiz(chatId, userId) {
   // ذخیره‌سازی اطلاعات در فایل
   session.status = "finished";
   session.score = correctCount; // Update score for ranking
+  session.incorrectCount = incorrectCount; // Update incorrect count for consistency
   session.name = quizSessions[userId].name;
   quizSessions[userId] = session;
   saveQuizResults(quizSessions);
@@ -2606,7 +2642,7 @@ bot.onText(/\/cancelgame/, async (msg) => {
   const options = msg.is_topic_message
     ? { message_thread_id: msg.message_thread_id }
     : {};
-  if (!game)
+  if (!game || game.state === "finished")
     return bot.sendMessage(
       chatId,
       "هیچ بازی فعالی برای لغو وجود ندارد.",
@@ -2741,14 +2777,16 @@ bot.on("callback_query", async (callbackQuery) => {
       }
 
       const sortedParticipants = finishedParticipants
-        .sort(([, a], [, b]) => b.correctCount - a.correctCount)
+        .sort(([, a], [, b]) => b.score - a.score)
         .slice(0, 10);
 
       let resultsText = "🏆 *نتایج آزمون زبان انگلیسی* 🏆\n\n";
       sortedParticipants.forEach(([id, session], index) => {
         const medal =
           index === 0 ? "🥇" : index === 1 ? "🥈" : index === 2 ? "🥉" : "▫️";
-        resultsText += `${medal} *${session.name}*: ${session.correctCount} ✅ / ${session.incorrectCount} ❌\n`;
+        const totalQuestions = session.answers.length;
+        const incorrectCount = totalQuestions - session.score;
+        resultsText += `${medal} *${session.name}*: ${session.score} ✅ / ${incorrectCount} ❌\n`;
       });
 
       bot.sendMessage(chatId, resultsText, {
@@ -2913,7 +2951,27 @@ bot.on("callback_query", async (callbackQuery) => {
   }
 });
 
-console.log("ربات کوییز با موفقیت روشن شد!");
+// مدیریت خطاهای عمومی
+process.on('uncaughtException', (error) => {
+  console.error('❌ خطای غیرمنتظره:', error.message);
+  // ذخیره بازی‌ها قبل از خروج
+  saveQuizResults(quizSessions);
+});
+
+process.on('unhandledRejection', (reason, promise) => {
+  console.error('❌ خطای Promise:', reason);
+});
+
+// مدیریت خطاهای تلگرام
+bot.on('polling_error', (error) => {
+  console.error('❌ خطای Polling:', error.message);
+});
+
+bot.on('error', (error) => {
+  console.error('❌ خطای بات:', error.message);
+});
+
+console.log("✅ ربات کوییز با موفقیت روشن شد!");
 
 // ✅ اضافه کردن دستورات به منوی ربات
 // این کد را فقط یک بار اجرا کنید و سپس می‌توانید آن را حذف کنید.
