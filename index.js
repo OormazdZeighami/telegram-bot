@@ -2051,10 +2051,10 @@ const path = require("path");
 const token = process.env.BOT_TOKEN || "8024875280:AAGv3q8X8uO3BkYmNURLZnHTFoaJhOoTfQY";
 const bot = new TelegramBot(token, { 
   polling: {
-    interval: 1000,
+    interval: 2000,
     autoStart: true,
     params: {
-      timeout: 10
+      timeout: 30
     }
   }
 });
@@ -2450,7 +2450,7 @@ function startNextRound(chatId) {
 // 🎯 توابع و منطق آزمون انفرادی (Quizz)
 // ----------------------------------------------------
 
-bot.onText(/\/quizz/, (msg) => {
+bot.onText(/^\/quizz$/, (msg) => {
   const chatId = msg.chat.id;
   const userId = msg.from.id;
   const options = msg.is_topic_message
@@ -2479,7 +2479,7 @@ bot.onText(/\/quizz/, (msg) => {
   });
 });
 
-bot.onText(/\/cancelquizz/, (msg) => {
+bot.onText(/^\/cancelquizz$/, (msg) => {
   const chatId = msg.chat.id;
   const userId = msg.from.id;
   const options = msg.is_topic_message
@@ -2610,7 +2610,7 @@ function endQuiz(chatId, userId) {
 // 🤖 مدیریت دستورات و Callback Query
 // ----------------------------------------------------
 
-bot.onText(/\/start/, (msg) => {
+bot.onText(/^\/start$/, (msg) => {
   const chatId = msg.chat.id;
   const options = msg.is_topic_message
     ? { message_thread_id: msg.message_thread_id }
@@ -2622,7 +2622,7 @@ bot.onText(/\/start/, (msg) => {
   );
 });
 
-bot.onText(/\/newgame/, async (msg) => {
+bot.onText(/^\/newgame$/, async (msg) => {
   const options = msg.is_topic_message
     ? { message_thread_id: msg.message_thread_id }
     : {};
@@ -2636,7 +2636,7 @@ bot.onText(/\/newgame/, async (msg) => {
   createNewGame(msg.chat.id, msg.from, options);
 });
 
-bot.onText(/\/cancelgame/, async (msg) => {
+bot.onText(/^\/cancelgame$/, async (msg) => {
   const chatId = msg.chat.id;
   const game = games[chatId];
   const options = msg.is_topic_message
@@ -2683,7 +2683,7 @@ bot.onText(/\/cancelgame/, async (msg) => {
   }
 });
 
-bot.onText(/\/translate (.+)/, async (msg, match) => {
+bot.onText(/^\/translate (.+)$/, async (msg, match) => {
   const chatId = msg.chat.id;
   const wordToTranslate = match[1];
   const options = msg.is_topic_message
@@ -2934,6 +2934,12 @@ bot.on("callback_query", async (callbackQuery) => {
       const chosenOptionIndex = parseInt(value, 10);
       const chosenOptionText = currentQuestion.options[chosenOptionIndex];
       const isCorrect = chosenOptionText === currentQuestion.correct_answer;
+      
+      // اطمینان از وجود game.answers[game.currentRound]
+      if (!game.answers[game.currentRound]) {
+        game.answers[game.currentRound] = {};
+      }
+      
       if (isCorrect) game.players[userId].score++;
       game.answers[game.currentRound][userId] = {
         answer: chosenOptionText,
