@@ -1,6 +1,6 @@
 // const TelegramBot = require("node-telegram-bot-api");
 
-// const token = "8024875280:AAGv3q8X8uO3BkYmNURLZnHTFoaJhOoTfQY"; // توکن واقعی خودت رو اینجا بگذار
+
 
 // const bot = new TelegramBot(token, {
 //   polling: true, // این خط برای فعال کردن حالت polling هست که ربات بتونه آپدیت‌ها رو دریافت کنه
@@ -24,7 +24,7 @@
 // const axios = require("axios");
 
 // // ❗️ توکن ربات خودت رو اینجا قرار بده
-// const token = "8024875280:AAGv3q8X8uO3BkYmNURLZnHTFoaJhOoTfQY";
+
 
 // // ❗️ کلید API رایگان خودت رو از سایت OpenWeatherMap بگیر و اینجا قرار بده
 // const weatherApiKey = "067af187004c63a200585053062965e4"; // <--- مهم! این قسمت رو باید پر کنی
@@ -78,7 +78,7 @@
 // const TelegramBot = require("node-telegram-bot-api");
 
 // // ❗️ توکن ربات خودت رو اینجا قرار بده
-// const token = "8024875280:AAGv3q8X8uO3BkYmNURLZnHTFoaJhOoTfQY";
+
 
 // const bot = new TelegramBot(token, { polling: true });
 
@@ -174,7 +174,7 @@
 // const axios = require("axios");
 
 // // ❗️ توکن ربات خودت رو اینجا قرار بده
-// const token = "8024875280:AAGv3q8X8uO3BkYmNURLZnHTFoaJhOoTfQY";
+
 
 // // ❗️ کلید API رایگانی که از سایت ExchangeRate-API.com گرفتی رو اینجا قرار بده
 // const exchangeApiKey = "127373a40d7805b5ef575b9d"; // <--- مهم! این قسمت رو باید پر کنی
@@ -287,7 +287,7 @@
 // const axios = require("axios");
 
 // // ❗️ توکن ربات خودت
-// const token = "8024875280:AAGv3q8X8uO3BkYmNURLZnHTFoaJhOoTfQY";
+
 
 // // ❗️ کلید API (v3) که از سایت themoviedb.org گرفتی
 // const tmdbApiKey = "73dbe770429c14b332057598d52f6fdf";
