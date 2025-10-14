@@ -1,0 +1,206 @@
+{
+  "Imagine": {
+    "artist": "John Lennon",
+    "english": [
+      "Imagine there's no heaven",
+      "It's easy if you try",
+      "No hell below us",
+      "Above us only sky",
+      "Imagine all the people",
+      "Living for today",
+      "Imagine there's no countries",
+      "It isn't hard to do",
+      "Nothing to kill or die for",
+      "And no religion too",
+      "Imagine all the people",
+      "Living life in peace"
+    ],
+    "persian": [
+      "تصور کن که بهشتی نیست",
+      "اگر تلاش کنی آسان است",
+      "هیچ جهنمی زیر ما نیست",
+      "فقط آسمان بالای ماست",
+      "تصور کن همه مردم",
+      "برای امروز زندگی می‌کنند",
+      "تصور کن که کشوری نیست",
+      "انجامش سخت نیست",
+      "هیچ چیزی برای کشتن یا مردن نیست",
+      "و هیچ مذهبی هم نیست",
+      "تصور کن همه مردم",
+      "در صلح زندگی می‌کنند"
+    ]
+  },
+  "Yesterday": {
+    "artist": "The Beatles",
+    "english": [
+      "Yesterday, all my troubles seemed so far away",
+      "Now it looks as though they're here to stay",
+      "Oh, I believe in yesterday",
+      "Suddenly, I'm not half the man I used to be",
+      "There's a shadow hanging over me",
+      "Oh, yesterday came suddenly"
+    ],
+    "persian": [
+      "دیروز، همه مشکلاتم خیلی دور به نظر می‌رسید",
+      "حالا به نظر می‌رسد که اینجا ماندگار شده‌اند",
+      "آه، من به دیروز اعتقاد دارم",
+      "ناگهان، من نصف مردی که بودم نیستم",
+      "سایه‌ای بر من آویزان است",
+      "آه، دیروز ناگهان آمد"
+    ]
+  },
+  "Bohemian Rhapsody": {
+    "artist": "Queen",
+    "english": [
+      "Is this the real life?",
+      "Is this just fantasy?",
+      "Caught in a landslide",
+      "No escape from reality",
+      "Open your eyes, look up to the skies and see",
+      "I'm just a poor boy, I need no sympathy"
+    ],
+    "persian": [
+      "آیا این زندگی واقعی است؟",
+      "آیا این فقط خیال است؟",
+      "در رانش زمین گرفتار شده",
+      "هیچ راه فراری از واقعیت نیست",
+      "چشمانت را باز کن، به آسمان نگاه کن و ببین",
+      "من فقط یک پسر فقیرم، نیازی به دلسوزی ندارم"
+    ]
+  },
+  "Hotel California": {
+    "artist": "Eagles",
+    "english": [
+      "On a dark desert highway",
+      "Cool wind in my hair",
+      "Warm smell of colitas",
+      "Rising up through the air",
+      "Up ahead in the distance",
+      "I saw a shimmering light",
+      "My head grew heavy and my sight grew dim",
+      "I had to stop for the night"
+    ],
+    "persian": [
+      "در بزرگراه تاریک بیابان",
+      "باد خنک در موهایم",
+      "بوی گرم کولیتاس",
+      "از میان هوا بالا می‌رود",
+      "در فاصله دور جلو",
+      "نور درخشانی دیدم",
+      "سرم سنگین شد و بیناییم کم شد",
+      "باید برای شب توقف می‌کردم"
+    ]
+  },
+  "Wonderwall": {
+    "artist": "Oasis",
+    "english": [
+      "Today is gonna be the day",
+      "That they're gonna throw it back to you",
+      "By now you should've somehow",
+      "Realized what you gotta do",
+      "I don't believe that anybody",
+      "Feels the way I do about you now"
+    ],
+    "persian": [
+      "امروز روزی خواهد بود",
+      "که آن را به تو برمی‌گردانند",
+      "حالا باید به نحوی",
+      "متوجه شده باشی چه کاری باید انجام دهی",
+      "من باور ندارم که کسی",
+      "همان احساسی را که من درباره تو دارم داشته باشد"
+    ]
+  },
+  "Shape of You": {
+    "artist": "Ed Sheeran",
+    "english": [
+      "The club isn't the best place to find a lover",
+      "So the bar is where I go",
+      "Me and my friends at the table doing shots",
+      "Drinking fast and then we talk slow",
+      "Come over and start up a conversation with just me",
+      "And trust me I'll give it a chance now"
+    ],
+    "persian": [
+      "کلوپ بهترین مکان برای پیدا کردن معشوق نیست",
+      "پس بار جایی است که می‌روم",
+      "من و دوستانم پشت میز شات می‌خوریم",
+      "سریع می‌نوشیم و بعد آرام صحبت می‌کنیم",
+      "بیا و گفتگویی فقط با من شروع کن",
+      "و به من اعتماد کن، حالا به آن شانس می‌دهم"
+    ]
+  },
+  "Despacito": {
+    "artist": "Luis Fonsi ft. Daddy Yankee",
+    "english": [
+      "Sí, sabes que ya llevo un rato mirándote",
+      "Tengo que bailar contigo hoy (DY)",
+      "Vi que tu mirada ya estaba llamándome",
+      "Muéstrame el camino que yo voy",
+      "Oh, tú, tú eres el imán y yo soy el metal",
+      "Me voy acercando y voy armando el plan"
+    ],
+    "persian": [
+      "بله، می‌دانی که مدتی است به تو نگاه می‌کنم",
+      "امروز باید با تو برقصم",
+      "دیدم که نگاهت مرا صدا می‌کرد",
+      "مسیری را که باید بروم به من نشان بده",
+      "اوه، تو، تو آهنربا هستی و من فلز هستم",
+      "نزدیک می‌شوم و نقشه می‌کشم"
+    ]
+  },
+  "Perfect": {
+    "artist": "Ed Sheeran",
+    "english": [
+      "I found a love for me",
+      "Darling, just dive right in and follow my lead",
+      "Well, I found a girl, beautiful and sweet",
+      "I never knew you were the someone waiting for me",
+      "Cause we were just kids when we fell in love",
+      "Not knowing what it was"
+    ],
+    "persian": [
+      "عشقی برای خودم پیدا کردم",
+      "عزیزم، فقط شیرجه بزن و مرا دنبال کن",
+      "خب، دختری پیدا کردم، زیبا و شیرین",
+      "نمی‌دانستم تو همان کسی هستی که منتظرم بودی",
+      "چون وقتی عاشق شدیم فقط بچه بودیم",
+      "نمی‌دانستیم چیست"
+    ]
+  },
+  "See You Again": {
+    "artist": "Wiz Khalifa ft. Charlie Puth",
+    "english": [
+      "It's been a long day without you, my friend",
+      "And I'll tell you all about it when I see you again",
+      "We've come a long way from where we began",
+      "Oh, I'll tell you all about it when I see you again",
+      "When I see you again"
+    ],
+    "persian": [
+      "روز طولانی‌ای بدون تو بوده، دوست من",
+      "و همه‌اش را وقتی دوباره تو را می‌بینم تعریف می‌کنم",
+      "از جایی که شروع کردیم راه زیادی آمده‌ایم",
+      "اوه، همه‌اش را وقتی دوباره تو را می‌بینم تعریف می‌کنم",
+      "وقتی دوباره تو را می‌بینم"
+    ]
+  },
+  "Closer": {
+    "artist": "The Chainsmokers ft. Halsey",
+    "english": [
+      "Hey, I was doing just fine before I met you",
+      "I drink too much and that's an issue, but I'm okay",
+      "Hey, you tell your friends it was nice to meet them",
+      "But I hope I never see them again",
+      "I know it breaks your heart",
+      "Moved to the city in a broke-down car"
+    ],
+    "persian": [
+      "هی، قبل از ملاقات تو کاملاً خوب بودم",
+      "زیاد می‌نوشم و این مشکل است، ولی خوبم",
+      "هی، به دوستانت می‌گویی که ملاقاتشان خوب بود",
+      "ولی امیدوارم دیگر هرگز آن‌ها را نبینم",
+      "می‌دانم قلب تو را می‌شکند",
+      "با ماشین خراب به شهر نقل مکان کردم"
+    ]
+  }
+}
