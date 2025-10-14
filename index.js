@@ -3906,9 +3906,18 @@ bot.onText(createCommandRegex('cancelgame'), async (msg) => {
   }
 });
 
-bot.onText(createCommandRegexWithParams('translate'), async (msg, match) => {
+// Handle /translate command with or without parameters
+bot.onText(createCommandRegex('translate'), async (msg, match) => {
   const chatId = msg.chat.id;
-  const wordToTranslate = match[1].trim();
+  const fullText = msg.text;
+  
+  // Extract the word to translate from the full text
+  const wordToTranslate = fullText.replace(/^\/translate(@\w+)?\s*/, '').trim();
+  
+  if (!wordToTranslate) {
+    await safeSendMessage(chatId, "❌ لطفاً کلمه یا اصطلاحی برای ترجمه وارد کنید.\n\nمثال: /translate hello");
+    return;
+  }
   const options = msg.is_topic_message
     ? { message_thread_id: msg.message_thread_id }
     : {};
