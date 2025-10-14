@@ -3907,13 +3907,18 @@ bot.on("callback_query", async (callbackQuery) => {
         answers: [],
         name: from.first_name,
       };
-      sendQuizQuestion(chatId, userId);
-    } else if (data === "quizz_results") {
-      const finishedParticipants = Object.entries(quizSessions).filter(
-        ([id, session]) => session.status === "finished"
-      );
-      if (finishedParticipants.length === 0) {
-        return await safeSendMessage(
+      // Handle /translate command with or without parameters
+bot.onText(createCommandRegex('translate'), async (msg, match) => {
+  const chatId = msg.chat.id;
+  const fullText = msg.text;
+  
+  // Extract the word to translate from the full text
+  const wordToTranslate = fullText.replace(/^\/translate(@\w+)?\s*/, '').trim();
+  
+  if (!wordToTranslate) {
+    await safeSendMessage(chatId, "❌ لطفاً کلمه یا اصطلاحی برای ترجمه وارد کنید.\n\nمثال: /translate hello");
+    return;
+  }(
           chatId,
           "❌ هنوز کسی در آزمون شرکت نکرده است.",
           options
