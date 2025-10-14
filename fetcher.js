@@ -1,5 +1,6 @@
-const axios = require("axios");
+const axios = require("./utils/http");
 const fs = require("fs");
+const fsp = fs.promises;
 const he = require("he");
 
 // Settings
@@ -84,13 +85,13 @@ async function fetchAllQuestions() {
       );
     }
 
-    // 4. Save the final result to the file
+    // 4. Save the final result to the file (async)
     const fileContent = `const questions = ${JSON.stringify(
       allQuestionsByCategory,
       null,
       2
     )};\n\nmodule.exports = questions;`;
-    fs.writeFileSync("questions.js", fileContent, "utf8");
+    await fsp.writeFile("questions.js", fileContent, "utf8");
 
     let totalSaved = Object.values(allQuestionsByCategory).reduce(
       (sum, cat) => sum + cat.length,
@@ -110,5 +111,9 @@ async function fetchAllQuestions() {
   }
 }
 
-// Run the script
-fetchAllQuestions();
+// Run the script when executed directly
+if (require.main === module) {
+  (async () => {
+    await fetchAllQuestions();
+  })();
+}

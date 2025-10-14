@@ -1,0 +1,262 @@
+{
+  "-4929086704_7132943895": {
+    "userId": 7132943895,
+    "chatId": -4929086704,
+    "warnings": [
+      {
+        "id": 1758662339758,
+        "adminId": 8041742380,
+        "reason": "اخطار توسط ادمین",
+        "timestamp": "2025-09-23T21:18:59.758Z"
+      },
+      {
+        "id": 1758662339759,
+        "adminId": 8041742380,
+        "reason": "اخطار توسط ادمین",
+        "timestamp": "2025-09-23T21:18:59.759Z"
+      },
+      {
+        "id": 1758662352300,
+        "adminId": 8041742380,
+        "reason": "اخطار توسط ادمین",
+        "timestamp": "2025-09-23T21:19:12.300Z"
+      },
+      {
+        "id": 1758662352301,
+        "adminId": 8041742380,
+        "reason": "اخطار توسط ادمین",
+        "timestamp": "2025-09-23T21:19:12.301Z"
+      },
+      {
+        "id": 1758662436548,
+        "adminId": 8041742380,
+        "reason": "Admin warning",
+        "timestamp": "2025-09-23T21:20:36.548Z"
+      },
+      {
+        "id": 1758662436561,
+        "adminId": 8041742380,
+        "reason": "Admin warning",
+        "timestamp": "2025-09-23T21:20:36.561Z"
+      },
+      {
+        "id": 1758662436561,
+        "adminId": 8041742380,
+        "reason": "Admin warning",
+        "timestamp": "2025-09-23T21:20:36.561Z"
+      },
+      {
+        "id": 1758662475063,
+        "adminId": 8041742380,
+        "reason": "Admin warning",
+        "timestamp": "2025-09-23T21:21:15.063Z"
+      },
+      {
+        "id": 1758662475077,
+        "adminId": 8041742380,
+        "reason": "Admin warning",
+        "timestamp": "2025-09-23T21:21:15.077Z"
+      },
+      {
+        "id": 1758662475077,
+        "adminId": 8041742380,
+        "reason": "Admin warning",
+        "timestamp": "2025-09-23T21:21:15.077Z"
+      },
+      {
+        "id": 1758662502256,
+        "adminId": 8041742380,
+        "reason": "Admin warning",
+        "timestamp": "2025-09-23T21:21:42.256Z"
+      },
+      {
+        "id": 1758662502271,
+        "adminId": 8041742380,
+        "reason": "Admin warning",
+        "timestamp": "2025-09-23T21:21:42.271Z"
+      },
+      {
+        "id": 1758662502272,
+        "adminId": 8041742380,
+        "reason": "Admin warning",
+        "timestamp": "2025-09-23T21:21:42.272Z"
+      },
+      {
+        "id": 1758662502272,
+        "adminId": 8041742380,
+        "reason": "Admin warning",
+        "timestamp": "2025-09-23T21:21:42.272Z"
+      },
+      {
+        "id": 1758662502272,
+        "adminId": 8041742380,
+        "reason": "Admin warning",
+        "timestamp": "2025-09-23T21:21:42.272Z"
+      },
+      {
+        "id": 1758662507961,
+        "adminId": 8041742380,
+        "reason": "Admin warning",
+        "timestamp": "2025-09-23T21:21:47.961Z"
+      },
+      {
+        "id": 1758662507976,
+        "adminId": 8041742380,
+        "reason": "Admin warning",
+        "timestamp": "2025-09-23T21:21:47.976Z"
+      },
+      {
+        "id": 1758662507976,
+        "adminId": 8041742380,
+        "reason": "Admin warning",
+        "timestamp": "2025-09-23T21:21:47.976Z"
+      },
+      {
+        "id": 1758662507977,
+        "adminId": 8041742380,
+        "reason": "Admin warning",
+        "timestamp": "2025-09-23T21:21:47.977Z"
+      },
+      {
+        "id": 1758662507977,
+        "adminId": 8041742380,
+        "reason": "Admin warning",
+        "timestamp": "2025-09-23T21:21:47.977Z"
+      },
+      {
+        "id": 1758662512383,
+        "adminId": 8041742380,
+        "reason": "Admin warning",
+        "timestamp": "2025-09-23T21:21:52.383Z"
+      },
+      {
+        "id": 1758662512406,
+        "adminId": 8041742380,
+        "reason": "Admin warning",
+        "timestamp": "2025-09-23T21:21:52.406Z"
+      },
+      {
+        "id": 1758662512407,
+        "adminId": 8041742380,
+        "reason": "Admin warning",
+        "timestamp": "2025-09-23T21:21:52.407Z"
+      },
+      {
+        "id": 1758662512407,
+        "adminId": 8041742380,
+        "reason": "Admin warning",
+        "timestamp": "2025-09-23T21:21:52.407Z"
+      },
+      {
+        "id": 1758662512408,
+        "adminId": 8041742380,
+        "reason": "Admin warning",
+        "timestamp": "2025-09-23T21:21:52.408Z"
+      },
+      {
+        "id": 1758662516280,
+        "adminId": 8041742380,
+        "reason": "Admin warning",
+        "timestamp": "2025-09-23T21:21:56.280Z"
+      },
+      {
+        "id": 1758662516296,
+        "adminId": 8041742380,
+        "reason": "Admin warning",
+        "timestamp": "2025-09-23T21:21:56.296Z"
+      },
+      {
+        "id": 1758662516296,
+        "adminId": 8041742380,
+        "reason": "Admin warning",
+        "timestamp": "2025-09-23T21:21:56.296Z"
+      },
+      {
+        "id": 1758662516297,
+        "adminId": 8041742380,
+        "reason": "Admin warning",
+        "timestamp": "2025-09-23T21:21:56.297Z"
+      },
+      {
+        "id": 1758662516297,
+        "adminId": 8041742380,
+        "reason": "Admin warning",
+        "timestamp": "2025-09-23T21:21:56.297Z"
+      },
+      {
+        "id": 1758662520256,
+        "adminId": 8041742380,
+        "reason": "Admin warning",
+        "timestamp": "2025-09-23T21:22:00.256Z"
+      },
+      {
+        "id": 1758662520271,
+        "adminId": 8041742380,
+        "reason": "Admin warning",
+        "timestamp": "2025-09-23T21:22:00.271Z"
+      },
+      {
+        "id": 1758662520271,
+        "adminId": 8041742380,
+        "reason": "Admin warning",
+        "timestamp": "2025-09-23T21:22:00.271Z"
+      },
+      {
+        "id": 1758662520272,
+        "adminId": 8041742380,
+        "reason": "Admin warning",
+        "timestamp": "2025-09-23T21:22:00.272Z"
+      },
+      {
+        "id": 1758662520272,
+        "adminId": 8041742380,
+        "reason": "Admin warning",
+        "timestamp": "2025-09-23T21:22:00.272Z"
+      },
+      {
+        "id": 1758663134480,
+        "adminId": 8041742380,
+        "reason": "Admin warning",
+        "timestamp": "2025-09-23T21:32:14.480Z"
+      },
+      {
+        "id": 1758663403727,
+        "adminId": 8041742380,
+        "reason": "Admin warning",
+        "timestamp": "2025-09-23T21:36:43.727Z"
+      },
+      {
+        "id": 1758663880540,
+        "adminId": 8041742380,
+        "reason": "اخطار ادمین",
+        "timestamp": "2025-09-23T21:44:40.540Z"
+      }
+    ],
+    "totalWarnings": 38
+  },
+  "-1002952928009_8131321158": {
+    "userId": 8131321158,
+    "chatId": -1002952928009,
+    "warnings": [
+      {
+        "id": 1758726828142,
+        "adminId": 8041742380,
+        "reason": "اخطار ادمین",
+        "timestamp": "2025-09-24T15:13:48.142Z"
+      },
+      {
+        "id": 1758727478443,
+        "adminId": 1383516675,
+        "reason": "اخطار ادمین",
+        "timestamp": "2025-09-24T15:24:38.443Z"
+      },
+      {
+        "id": 1758727489377,
+        "adminId": 1383516675,
+        "reason": "اخطار ادمین",
+        "timestamp": "2025-09-24T15:24:49.377Z"
+      }
+    ],
+    "totalWarnings": 3
+  }
+}
