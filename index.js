@@ -1,6 +1,6 @@
 // const TelegramBot = require("node-telegram-bot-api");
 
-
+// const token = "7132943895:AAHmR4_KbRp76jagCgJ2YqbzYEV_Ny-rkWM"; // توکن واقعی خودت رو اینجا بگذار
 
 // const bot = new TelegramBot(token, {
 //   polling: true, // این خط برای فعال کردن حالت polling هست که ربات بتونه آپدیت‌ها رو دریافت کنه
@@ -24,7 +24,7 @@
 // const axios = require("axios");
 
 // // ❗️ توکن ربات خودت رو اینجا قرار بده
-
+// const token = "7132943895:AAHmR4_KbRp76jagCgJ2YqbzYEV_Ny-rkWM";
 
 // // ❗️ کلید API رایگان خودت رو از سایت OpenWeatherMap بگیر و اینجا قرار بده
 // const weatherApiKey = "067af187004c63a200585053062965e4"; // <--- مهم! این قسمت رو باید پر کنی
@@ -78,7 +78,7 @@
 // const TelegramBot = require("node-telegram-bot-api");
 
 // // ❗️ توکن ربات خودت رو اینجا قرار بده
-
+// const token = "7132943895:AAHmR4_KbRp76jagCgJ2YqbzYEV_Ny-rkWM";
 
 // const bot = new TelegramBot(token, { polling: true });
 
@@ -174,7 +174,7 @@
 // const axios = require("axios");
 
 // // ❗️ توکن ربات خودت رو اینجا قرار بده
-
+// const token = "7132943895:AAHmR4_KbRp76jagCgJ2YqbzYEV_Ny-rkWM";
 
 // // ❗️ کلید API رایگانی که از سایت ExchangeRate-API.com گرفتی رو اینجا قرار بده
 // const exchangeApiKey = "127373a40d7805b5ef575b9d"; // <--- مهم! این قسمت رو باید پر کنی
@@ -287,7 +287,7 @@
 // const axios = require("axios");
 
 // // ❗️ توکن ربات خودت
-
+// const token = "7132943895:AAHmR4_KbRp76jagCgJ2YqbzYEV_Ny-rkWM";
 
 // // ❗️ کلید API (v3) که از سایت themoviedb.org گرفتی
 // const tmdbApiKey = "73dbe770429c14b332057598d52f6fdf";
@@ -1390,7 +1390,7 @@
 
 // // 🔑 توکن ربات شما
 // // const token = process.env.BOT_TOKEN;
-
+// const token = "7132943895:AAHmR4_KbRp76jagCgJ2YqbzYEV_Ny-rkWM";
 // const bot = new TelegramBot(token, { polling: true });
 
 // let games = {};
@@ -2036,6 +2036,13 @@
 
 
 
+
+
+
+
+// Load .env in development (if present)
+require('dotenv').config();
+
 const TelegramBot = require("node-telegram-bot-api");
 const he = require("he");
 const { translate } = require("@vitalets/google-translate-api");
@@ -2050,8 +2057,186 @@ const englishIdioms = JSON.parse(fs.readFileSync(path.join(__dirname, "english_i
 
 // Global safety handlers and axios defaults to make operations non-blocking and resilient
 // 🔑 توکن ربات شما
+// NOTE: prefer setting BOT_TOKEN in environment. No hard-coded fallback to encourage secure handling.
 const token = process.env.BOT_TOKEN;
-const bot = new TelegramBot(token, { polling: true });
+if (!token) {
+  console.error('ERROR: BOT_TOKEN is not set. Please create a .env file or set BOT_TOKEN in the environment. See .env.example.');
+  // Fail fast so we don't start the bot in an invalid state
+  process.exit(1);
+}
+// Support either polling (default) or webhook (faster, recommended in production)
+const WEBHOOK_URL = process.env.WEBHOOK_URL || null;
+const PORT = process.env.PORT || process.env.PORT || 3000;
+
+let bot;
+if (WEBHOOK_URL) {
+  // webhook mode using express
+  const express = require('express');
+  const bodyParser = require('body-parser');
+  const app = express();
+  app.use(bodyParser.json());
+
+  bot = new TelegramBot(token);
+  // set webhook to the provided URL
+  (async () => {
+    try {
+      await bot.setWebHook(WEBHOOK_URL);
+      console.log('Webhook set to', WEBHOOK_URL);
+    } catch (e) {
+      console.error('Failed to set webhook:', e && e.message ? e.message : e);
+    }
+  })();
+
+  app.post('/telegram-webhook', (req, res) => {
+    bot.processUpdate(req.body);
+    res.sendStatus(200);
+  });
+
+  app.listen(PORT, () => console.log(`Express webhook server running on port ${PORT}`));
+} else {
+  // polling mode with conflict handling
+  bot = new TelegramBot(token, {
+    polling: {
+      interval: 3000, // Increase interval to reduce conflicts
+      autoStart: false, // Don't auto-start, we'll start manually
+      params: {
+        timeout: 30,
+        allowed_updates: ['message', 'callback_query'], // Only listen to specific updates
+      },
+    },
+  });
+  
+  // Start polling with improved conflict handling
+  let pollingRetries = 0;
+  const maxRetries = 3; // Reduce max retries
+  let isPollingActive = false;
+  
+  async function startPollingWithRetry() {
+    if (isPollingActive) {
+      console.log('⚠️ Polling already active, skipping start attempt');
+      return;
+    }
+    
+    try {
+      isPollingActive = true;
+      await bot.startPolling();
+      console.log('✅ Bot polling started successfully');
+      pollingRetries = 0; // Reset retry counter on success
+      isPollingActive = false;
+    } catch (error) {
+      isPollingActive = false;
+      pollingRetries++;
+      
+      if (error.message && error.message.includes('409 Conflict')) {
+        console.log(`⚠️ Conflict detected (attempt ${pollingRetries}/${maxRetries}). Waiting longer before retry...`);
+        
+        if (pollingRetries < maxRetries) {
+          const waitTime = Math.min(15000 * pollingRetries, 45000); // Longer wait for conflicts
+          console.log(`⏳ Retrying polling in ${waitTime/1000} seconds...`);
+          setTimeout(startPollingWithRetry, waitTime);
+        } else {
+          console.error('❌ Max conflict retries reached. Please ensure only one bot instance is running.');
+          console.log('💡 Tip: Run "taskkill /f /im node.exe" to stop all instances, then restart.');
+        }
+      } else {
+        console.error(`❌ Polling start failed (attempt ${pollingRetries}/${maxRetries}):`, error.message);
+        
+        if (pollingRetries < maxRetries) {
+          const waitTime = Math.min(5000 * pollingRetries, 15000);
+          console.log(`⏳ Retrying polling in ${waitTime/1000} seconds...`);
+          setTimeout(startPollingWithRetry, waitTime);
+        } else {
+          console.error('❌ Max polling retries reached. Bot may not receive updates.');
+        }
+      }
+    }
+  }
+  
+  // Start polling after a longer delay to avoid conflicts
+  setTimeout(startPollingWithRetry, 5000);
+}
+
+// quick connectivity check: log bot info and add a ping handler
+bot.getMe()
+  .then(async (me) => {
+    botUsername = me.username;
+    console.log(`Bot connected as @${me.username} (id: ${me.id})`);
+    
+    // Clear any existing webhook to ensure polling works
+    try {
+      // Note: getWebhookInfo might not be available in all versions
+      console.log('ℹ️ Skipping webhook check - using polling mode');
+    } catch (error) {
+      console.log('ℹ️ No webhook to clear or error:', error.message);
+    }
+  })
+  .catch((err) => console.error('Failed to get bot info:', err && err.message ? err.message : err));
+
+// --- Improved Rate limiter (per-user) ---
+// Default cooldown in seconds; can be tuned with RATE_LIMIT_SECONDS env var
+const RATE_LIMIT_SECONDS = parseInt(process.env.RATE_LIMIT_SECONDS || '2', 10); // افزایش به 2 ثانیه برای کاهش تداخل
+const userRateMap = new Map(); // userId -> timestamp of last action
+const globalRateMap = new Map(); // command -> timestamp of last global execution
+
+// Bot username for command handling
+let botUsername = '';
+
+// Helper function to create command regex that handles bot username
+function createCommandRegex(command) {
+  // This regex will match both "/command" and "/command@botusername"
+  return new RegExp(`^\\/${command}(@\\w+)?\\s*$`);
+}
+
+// Helper function to create command regex with parameters
+function createCommandRegexWithParams(command) {
+  // This regex will match both "/command param" and "/command@botusername param"
+  return new RegExp(`^\\/${command}(@\\w+)?\\s+(.+)$`);
+}
+
+function isRateLimited(userId) {
+  if (!userId) return false;
+  const now = Date.now();
+  const last = userRateMap.get(userId) || 0;
+  
+  // Check user rate limit
+  if (now - last < RATE_LIMIT_SECONDS * 1000) return true;
+  
+  // Check global rate limit (prevent multiple bots from overwhelming the API)
+  const globalLast = globalRateMap.get('global') || 0;
+  if (now - globalLast < 500) return true; // 500ms global cooldown
+  
+  userRateMap.set(userId, now);
+  globalRateMap.set('global', now);
+  return false;
+}
+
+async function handleRateLimited(userId, chatId, reason = 'شما خیلی سریع درخواست می‌دهید، لطفاً چند ثانیه صبر کنید.') {
+  try {
+    await safeApiCall(() => bot.sendMessage(chatId, reason));
+  } catch (e) {
+    // ignore send errors
+  }
+}
+
+bot.onText(/^\/ping\b/, (msg) => {
+  console.log('🎯 /ping command received from:', msg.from.id, 'in chat:', msg.chat.id);
+  try {
+    safeSendMessage(msg.chat.id, '🏓 pong - ربات فعال است!');
+  } catch (e) {
+    console.error('Error replying to /ping:', e);
+  }
+});
+
+// Test command to check if bot is receiving messages
+bot.onText(/^\/test$/, (msg) => {
+  console.log('🎯 /test command received from:', msg.from.id, 'in chat:', msg.chat.id);
+  try {
+    const response = `✅ ربات فعال است!\n👤 کاربر: ${msg.from.first_name}\n💬 چت: ${msg.chat.id}\n⏰ زمان: ${new Date().toLocaleString('fa-IR')}`;
+    safeSendMessage(msg.chat.id, response);
+  } catch (e) {
+    console.error('Error in /test command:', e);
+  }
+});
 
 // Log all incoming messages for debugging
 bot.on('message', (msg) => {
@@ -3427,12 +3612,19 @@ async function startNextRound(chatId) {
 // 🎯 توابع و منطق آزمون انفرادی (Quizz)
 // ----------------------------------------------------
 
-bot.onText(/\/quizz/, (msg) => {
-  const chatId = msg.chat.id;
-  const userId = msg.from.id;
-  const options = msg.is_topic_message
-    ? { message_thread_id: msg.message_thread_id }
-    : {};
+bot.onText(/^\/quizz\b/, (msg) => {
+  try {
+    // rate limit check
+    if (isRateLimited(msg.from && msg.from.id)) {
+      handleRateLimited(msg.from && msg.from.id, msg.chat.id);
+      return;
+    }
+    console.log('/quizz called by', msg.from && msg.from.id);
+    const chatId = msg.chat.id;
+    const userId = msg.from.id;
+    const options = msg.is_topic_message
+      ? { message_thread_id: msg.message_thread_id }
+      : {};
 
     const keyboard = [
       [{ text: "🚀 شروع آزمون", callback_data: "quizz_start" }],
@@ -3460,7 +3652,7 @@ bot.onText(/\/quizz/, (msg) => {
   }
 });
 
-bot.onText(/\/cancelquizz/, (msg) => {
+bot.onText(/^\/cancelquizz$/, (msg) => {
   const chatId = msg.chat.id;
   const userId = msg.from.id;
   const options = msg.is_topic_message
@@ -3476,7 +3668,7 @@ bot.onText(/\/cancelquizz/, (msg) => {
     );
   }
 
-  // توقف تایمر
+  // توقف تایمر و حذف پیام فعلی
   if (session.timer) {
     clearTimeout(session.timer);
   }
@@ -3503,21 +3695,26 @@ async function sendQuizQuestion(chatId, userId) {
     { text: he.decode(option), callback_data: `quizz_answer_${index}` },
   ]);
 
-  const initialTime = 15;
   const messageText = `*سوال ${session.currentQuestionIndex + 1} از ${
     session.questions.length
-  }*\n\n*${questionText}*\n\n⏱️ *${initialTime}* ثانیه برای پاسخ دارید.`;
+  }*\n\n*${questionText}*`;
 
-  if (session.currentMessageId) {
-    try {
-      await bot.editMessageText(messageText, {
-        chat_id: chatId,
-        message_id: session.currentMessageId,
-        parse_mode: "Markdown",
-        reply_markup: { inline_keyboard: options },
-      });
-    } catch (error) {
-      const newMessage = await bot.sendMessage(chatId, messageText, {
+  let questionMessage;
+  
+  // اگر پیام قبلی وجود دارد، آن را ویرایش کن
+  if (session.currentMessageId && session.currentQuestionIndex > 0) {
+    const editSuccess = await safeEditMessageText(messageText, {
+      chat_id: chatId,
+      message_id: session.currentMessageId,
+      parse_mode: "Markdown",
+      reply_markup: { inline_keyboard: options },
+    });
+    
+    if (editSuccess) {
+      questionMessage = { message_id: session.currentMessageId };
+    } else {
+      // اگر ویرایش ناموفق بود، پیام جدید ارسال کن
+      questionMessage = await bot.sendMessage(chatId, messageText, {
         parse_mode: "Markdown",
         reply_markup: { inline_keyboard: options },
         message_thread_id:
@@ -3525,10 +3722,10 @@ async function sendQuizQuestion(chatId, userId) {
             ? games[chatId].threadId
             : undefined,
       });
-      session.currentMessageId = newMessage.message_id;
     }
   } else {
-    const newMessage = await bot.sendMessage(chatId, messageText, {
+    // برای سوال اول، پیام جدید ارسال کن
+    questionMessage = await bot.sendMessage(chatId, messageText, {
       parse_mode: "Markdown",
       reply_markup: { inline_keyboard: options },
       message_thread_id:
@@ -3536,14 +3733,13 @@ async function sendQuizQuestion(chatId, userId) {
           ? games[chatId].threadId
           : undefined,
     });
-    session.currentMessageId = newMessage.message_id;
   }
-});
 
+  session.currentMessageId = questionMessage.message_id;
   session.timer = setTimeout(() => {
-    if (!quizSessions[userId] || quizSessions[userId].status !== "in_progress")
-      return;
-
+    // Timeout logic - check if quiz is still active
+    if (!session || session.status !== "in_progress") return;
+    
     const questionToSave = session.questions[session.currentQuestionIndex];
     session.answers.push({
       question: questionToSave.question,
@@ -3552,22 +3748,1277 @@ async function sendQuizQuestion(chatId, userId) {
       isCorrect: false,
     });
 
-    bot.deleteMessage(chatId, session.currentMessageId).catch(() => {});
+  safeApiCall(() => bot.deleteMessage(chatId, session.currentMessageId)).catch(() => {});
     session.currentQuestionIndex++;
     sendQuizQuestion(chatId, userId);
-  }, initialTime * 1000);
+  }, 15000);
 }
+
+async function endQuiz(chatId, userId) {
+  const session = quizSessions[userId];
+  if (!session) return;
+
+  const correctCount = session.answers.filter((ans) => ans.isCorrect).length;
+  const incorrectCount = session.answers.length - correctCount;
+
+  const finalScoreText = `🎉 *آزمون به پایان رسید!* 🎉\n\nامتیاز نهایی شما: *${correctCount}* از *${session.questions.length}*.\nتعداد پاسخ‌های صحیح: ${correctCount} ✅\nتعداد پاسخ‌های غلط: ${incorrectCount} ❌\n\nبرای مشاهده رتبه‌بندی کلی یا پاسخ‌های اشتباه خود، دوباره از دستور /quizz استفاده کنید.`;
+
+  await safeApiCall(() => bot.sendMessage(chatId, finalScoreText, {
+    parse_mode: "Markdown",
+    message_thread_id:
+      games[chatId] && games[chatId].threadId
+        ? games[chatId].threadId
+        : undefined,
+  }));
+
+  // ذخیره‌سازی اطلاعات در فایل (آسینک)
+  session.status = "finished";
+  session.score = correctCount; // Update score for ranking
+  session.incorrectCount = incorrectCount; // Update incorrect count for consistency
+  session.name = quizSessions[userId].name;
+  quizSessions[userId] = session;
+  // debounced save to reduce disk IO
+  saveQuizResultsDebounced(quizSessions);
+}
+
+// ----------------------------------------------------
+// 🤖 مدیریت دستورات و Callback Query
+// ----------------------------------------------------
+
+bot.onText(createCommandRegex('start'), (msg) => {
+  const chatId = msg.chat.id;
+  const options = msg.is_topic_message
+    ? { message_thread_id: msg.message_thread_id }
+    : {};
+  safeSendMessage(
+    chatId,
+    "سلام! برای شروع یک بازی جدید در گروه، از منوی دستورات (/) استفاده کنید.",
+    options
+  );
+});
+
+bot.onText(createCommandRegex('newgame'), async (msg) => {
+  try {
+    console.log('/newgame called by', msg.from && msg.from.id);
+    const options = msg.is_topic_message
+      ? { message_thread_id: msg.message_thread_id }
+      : {};
+    if (msg.chat.type === "private") {
+      return bot.sendMessage(
+        msg.chat.id,
+        "این بازی فقط در گروه‌ها قابل اجراست!",
+        options
+      );
+    }
+    await createNewGame(msg.chat.id, msg.from, options);
+  } catch (err) {
+    console.error('Error handling /newgame:', err);
+    safeSendMessage(msg.chat.id, 'متاسفم، در ایجاد بازی مشکلی پیش آمد. بعداً تلاش کنید.');
+  }
+});
+
+bot.onText(createCommandRegex('cancelgame'), async (msg) => {
+  console.log('🎯 /cancelgame called by:', msg.from.id, 'in chat:', msg.chat.id);
+  const chatId = msg.chat.id;
+  const game = games[chatId];
+  const options = msg.is_topic_message
+    ? { message_thread_id: msg.message_thread_id }
+    : {};
+  
+  console.log('🎮 Game state:', game ? game.state : 'no game');
+  
+  if (!game || game.state === "finished") {
+    console.log('❌ No active game to cancel');
+    return safeSendMessage(
+      chatId,
+      "هیچ بازی فعالی برای لغو وجود ندارد.",
+      options
+    );
+  }
+  
+  try {
+    // Check if user is admin using our isAdmin function
+    const userIsAdmin = await isAdmin(msg.from.id, chatId);
+    console.log('👤 User is admin:', userIsAdmin, 'Creator ID:', game.creatorId, 'User ID:', msg.from.id);
+    
+    if (msg.from.id === game.creatorId || userIsAdmin) {
+      console.log('✅ Cancelling game - user has permission');
+      
+      // Clear timer if exists
+      if (game.timerId) {
+        clearTimeout(game.timerId);
+        console.log('⏰ Game timer cleared');
+      }
+      
+      // Try to delete the game message
+      try {
+        await bot.deleteMessage(chatId, game.gameMessageId);
+        console.log('🗑️ Game message deleted');
+      } catch (deleteError) {
+        console.log('⚠️ Could not delete game message:', deleteError.message);
+      }
+      
+      // Remove game from memory
+      delete games[chatId];
+      console.log('🎮 Game removed from memory');
+      
+      // Send confirmation message
+      await safeSendMessage(
+        chatId,
+        "✅ بازی فعال توسط سازنده یا ادمین لغو شد.",
+        options
+      );
+      console.log('✅ Cancel confirmation sent');
+    } else {
+      console.log('❌ User does not have permission to cancel game');
+      safeSendMessage(
+        chatId,
+        "❌ فقط سازنده بازی یا ادمین‌های گروه می‌توانند بازی را لغو کنند.",
+        options
+      );
+    }
+  } catch (error) {
+    console.error('❌ Error in /cancelgame:', error.message);
+    
+    // Fallback: if user is creator, allow cancel even if admin check fails
+    if (msg.from.id === game.creatorId) {
+      console.log('🔄 Fallback: Creator canceling game');
+      
+      if (game.timerId) {
+        clearTimeout(game.timerId);
+      }
+      
+      try {
+        await bot.deleteMessage(chatId, game.gameMessageId);
+      } catch (deleteError) {
+        console.log('⚠️ Could not delete game message in fallback');
+      }
+      
+      delete games[chatId];
+      safeSendMessage(chatId, "✅ بازی فعال توسط سازنده لغو شد.", options);
+    } else {
+      safeSendMessage(
+        chatId,
+        "❌ خطا در لغو بازی. لطفاً دوباره تلاش کنید.",
+        options
+      );
+    }
+  }
+});
+
+// Handle /translate command with or without parameters
+bot.onText(createCommandRegex('translate'), async (msg, match) => {
+  const chatId = msg.chat.id;
+  const fullText = msg.text;
+  
+  // Extract the word to translate from the full text
+  const wordToTranslate = fullText.replace(/^\/translate(@\w+)?\s*/, '').trim();
+  
+  if (!wordToTranslate) {
+    await safeSendMessage(chatId, "❌ لطفاً کلمه یا اصطلاحی برای ترجمه وارد کنید.\n\nمثال: /translate hello");
+    return;
+  }
+  const options = msg.is_topic_message
+    ? { message_thread_id: msg.message_thread_id }
+    : {};
+  
+  try {
+    // First check if it's an idiom in our dictionary
+    if (englishIdioms[wordToTranslate.toLowerCase()]) {
+      const messageText = `📖 اصطلاح انگلیسی *${he.decode(wordToTranslate)}*:\n\n🇮🇷 *${he.decode(englishIdioms[wordToTranslate.toLowerCase()])}*`;
+      await safeSendMessage(chatId, messageText, {
+        ...options,
+        parse_mode: "Markdown",
+      });
+      
+      // Still send pronunciation audio
+      const ttsUrl = `https://translate.google.com/translate_tts?ie=UTF-8&client=tw-ob&q=${encodeURIComponent(
+        wordToTranslate
+      )}&tl=en`;
+      const response = await axios({
+        method: "get",
+        url: ttsUrl,
+        responseType: "stream",
+      });
+      const caption = `🔊 تلفظ *${he.decode(wordToTranslate)}*`;
+      bot.sendAudio(chatId, response.data, {
+        ...options,
+        caption: caption,
+        parse_mode: "Markdown",
+      });
+    } else if (englishWords[wordToTranslate]) {
+      // Check if it's in our English words database
+      const messageText = `📖 کلمه انگلیسی *${he.decode(wordToTranslate)}*:\n\n🇮🇷 *${he.decode(englishWords[wordToTranslate])}*`;
+      await safeSendMessage(chatId, messageText, {
+        ...options,
+        parse_mode: "Markdown",
+      });
+      
+      // Still send pronunciation audio
+      const ttsUrl = `https://translate.google.com/translate_tts?ie=UTF-8&client=tw-ob&q=${encodeURIComponent(
+        wordToTranslate
+      )}&tl=en`;
+      const response = await axios({
+        method: "get",
+        url: ttsUrl,
+        responseType: "stream",
+      });
+      const caption = `🔊 تلفظ *${he.decode(wordToTranslate)}*`;
+      bot.sendAudio(chatId, response.data, {
+        ...options,
+        caption: caption,
+        parse_mode: "Markdown",
+      });
+    } else {
+      // Use Google Translate for regular words
+      const translationResult = await translate(wordToTranslate, { to: "fa" });
+      const translatedText = translationResult.text;
+      const messageText = `📖 ترجمه *${he.decode(
+        wordToTranslate
+      )}*:\n\n🇮🇷 *${he.decode(translatedText)}*`;
+      await safeSendMessage(chatId, messageText, {
+        ...options,
+        parse_mode: "Markdown",
+      });
+      
+      const ttsUrl = `https://translate.google.com/translate_tts?ie=UTF-8&client=tw-ob&q=${encodeURIComponent(
+        wordToTranslate
+      )}&tl=en`;
+      const response = await axios({
+        method: "get",
+        url: ttsUrl,
+        responseType: "stream",
+      });
+      const caption = `🔊 تلفظ *${he.decode(wordToTranslate)}*`;
+      bot.sendAudio(chatId, response.data, {
+        ...options,
+        caption: caption,
+        parse_mode: "Markdown",
+      });
+    }
+  } catch (error) {
+    console.error("Translate command error:", error.message);
+    safeSendMessage(
+      chatId,
+      "متاسفانه در ترجمه یا دریافت تلفظ مشکلی پیش آمد. لطفاً کلمه انگلیسی را به درستی وارد کنید.",
+      options
+    );
+  }
+});
+
+// 📚 دستور /words - نمایش کلمات انگلیسی با صفحه‌بندی
+bot.onText(new RegExp(`^\\/words(@\\w+)?(?: (\\d+))?$`), async (msg, match) => {
+  const chatId = msg.chat.id;
+  const page = parseInt(match[2]) || 1;
+  const options = msg.is_topic_message
+    ? { message_thread_id: msg.message_thread_id }
+    : {};
+
+  try {
+    const wordCount = Object.keys(englishWords).length;
+    const wordsPerPage = 10;
+    const totalPages = Math.ceil(wordCount / wordsPerPage);
+    const startIndex = (page - 1) * wordsPerPage;
+    const endIndex = startIndex + wordsPerPage;
+    
+    if (page > totalPages || page < 1) {
+      await safeSendMessage(chatId, `❌ صفحه ${page} وجود ندارد. صفحات موجود: 1 تا ${totalPages}`, options);
+      return;
+    }
+    
+    let messageText = `📚 *کلمات انگلیسی* (صفحه ${page} از ${totalPages})\n`;
+    messageText += `📊 *تعداد کل:* ${wordCount} کلمه\n\n`;
+    
+    // نمایش کلمات صفحه فعلی
+    const words = Object.keys(englishWords).slice(startIndex, endIndex);
+    words.forEach((word, index) => {
+      const globalIndex = startIndex + index + 1;
+      messageText += `${globalIndex}. *${word}* = ${englishWords[word]}\n`;
+    });
+    
+    // دکمه‌های ناوبری
+    const keyboard = [];
+    const navRow = [];
+    
+    if (page > 1) {
+      navRow.push({ text: "◀️ قبلی", callback_data: `words_page_${page - 1}` });
+    }
+    navRow.push({ text: `${page}/${totalPages}`, callback_data: "words_info" });
+    if (page < totalPages) {
+      navRow.push({ text: "بعدی ▶️", callback_data: `words_page_${page + 1}` });
+    }
+    
+    if (navRow.length > 0) {
+      keyboard.push(navRow);
+    }
+    
+    await safeSendMessage(chatId, messageText, {
+      ...options,
+      parse_mode: "Markdown",
+      reply_markup: keyboard.length > 0 ? { inline_keyboard: keyboard } : undefined
+    });
+  } catch (error) {
+    console.error("Words command error:", error.message);
+    await safeSendMessage(
+      chatId,
+      "متاسفانه در نمایش کلمات مشکلی پیش آمد.",
+      options
+    );
+  }
+});
+
+// ➕ دستور /addword - اضافه کردن کلمات جدید (فقط ادمین‌ها)
+bot.onText(createCommandRegexWithParams('addword'), async (msg) => {
+  const chatId = msg.chat.id;
+  const userId = msg.from.id;
+  const input = msg.text.replace(/^\/addword\s*/, '').trim();
+  const options = msg.is_topic_message
+    ? { message_thread_id: msg.message_thread_id }
+    : {};
+
+  try {
+    // بررسی مجوز ادمین
+    const userIsAdmin = await isAdmin(userId, chatId);
+    if (!userIsAdmin) {
+      await safeSendMessage(chatId, "❌ فقط ادمین‌ها می‌توانند کلمات جدید اضافه کنند.", options);
+      return;
+    }
+
+    // تجزیه ورودی برای دریافت چندین کلمه
+    const lines = input.split('\n').filter(line => line.trim());
+    const addedWords = [];
+    let errorCount = 0;
+    
+    if (lines.length > 10) {
+      await safeSendMessage(chatId, "❌ حداکثر 10 کلمه در هر بار می‌توانید اضافه کنید.", options);
+      return;
+    }
+    
+    for (const line of lines) {
+      let englishWord = '';
+      let persianMeaning = '';
+      
+      // Check for tab-separated format (english\tpersian)
+      if (line.includes('\t')) {
+        const parts = line.split('\t');
+        if (parts.length >= 2) {
+          englishWord = parts[0].trim();
+          persianMeaning = parts.slice(1).join(' ').trim();
+        }
+      }
+      // Check for equals format (english = persian)
+      else if (line.includes('=')) {
+        const parts = line.split('=');
+        if (parts.length === 2) {
+          englishWord = parts[0].trim();
+          persianMeaning = parts[1].trim();
+        }
+      }
+      // Check for multiple spaces format (english    persian)
+      else if (line.match(/\s{2,}/)) {
+        const parts = line.split(/\s{2,}/);
+        if (parts.length >= 2) {
+          englishWord = parts[0].trim();
+          persianMeaning = parts.slice(1).join(' ').trim();
+        }
+      }
+      
+      if (englishWord && persianMeaning) {
+        englishWords[englishWord.toLowerCase()] = persianMeaning;
+        addedWords.push({ english: englishWord, persian: persianMeaning });
+      } else {
+        errorCount++;
+      }
+    }
+    
+    if (addedWords.length === 0) {
+      await safeSendMessage(chatId, 
+        "❌ فرمت صحیح:\n\n" +
+        "**فرمت 1:** /addword کلمه1 = معنی1\nکلمه2 = معنی2\n...\n\n" +
+        "**فرمت 2:** /addword کلمه1\tمعنی1\nکلمه2\tمعنی2\n...\n\n" +
+        "**فرمت 3:** /addword کلمه1    معنی1\nکلمه2    معنی2\n...\n\n" +
+        "مثال:\n/addword Computer = کامپیوتر\nPhone = تلفن\n\n" +
+        "یا:\n/addword Purchase\tخرید کردن\nArrange\tترتیب دادن", 
+        options
+      );
+      return;
+    }
+    
+    // ذخیره در فایل
+    fs.writeFileSync(
+      path.join(__dirname, "english_words.json"),
+      JSON.stringify(englishWords, null, 2),
+      "utf8"
+    );
+    
+    let messageText = `✅ *${addedWords.length} کلمه جدید توسط ادمین اضافه شد:*\n\n`;
+    
+    addedWords.forEach((word, index) => {
+      messageText += `${index + 1}. *${word.english}* = ${word.persian}\n`;
+    });
+    
+    messageText += `\n📊 تعداد کل کلمات: ${Object.keys(englishWords).length}`;
+    
+    if (errorCount > 0) {
+      messageText += `\n⚠️ ${errorCount} خط در فرمت ورودی`;
+    }
+    
+    await safeSendMessage(chatId, messageText, {
+      ...options,
+      parse_mode: "Markdown",
+    });
+  } catch (error) {
+    console.error("Addword command error:", error.message);
+    await safeSendMessage(
+      chatId,
+      "متاسفانه در اضافه کردن کلمات مشکلی پیش آمد.",
+      options
+    );
+  }
+});
+
+// 🗑️ دستور /deleteword - حذف کلمات (فقط ادمین‌ها)
+bot.onText(/^\/deleteword (.+)$/, async (msg, match) => {
+  const chatId = msg.chat.id;
+  const userId = msg.from.id;
+  const input = match[1].trim();
+  const options = msg.is_topic_message
+    ? { message_thread_id: msg.message_thread_id }
+    : {};
+
+  try {
+    // بررسی مجوز ادمین
+    const userIsAdmin = await isAdmin(userId, chatId);
+    if (!userIsAdmin) {
+      await safeSendMessage(chatId, "❌ فقط ادمین‌ها می‌توانند کلمات را حذف کنند.", options);
+      return;
+    }
+
+    // تجزیه ورودی برای دریافت چندین کلمه
+    const wordsToDelete = input.split('\n').filter(word => word.trim());
+    const deletedWords = [];
+    const notFoundWords = [];
+    
+    if (wordsToDelete.length > 10) {
+      await safeSendMessage(chatId, "❌ حداکثر 10 کلمه در هر بار می‌توانید حذف کنید.", options);
+      return;
+    }
+    
+    for (const word of wordsToDelete) {
+      const trimmedWord = word.trim();
+      if (trimmedWord) {
+        if (englishWords[trimmedWord]) {
+          const meaning = englishWords[trimmedWord];
+          delete englishWords[trimmedWord];
+          deletedWords.push({ english: trimmedWord, persian: meaning });
+        } else {
+          notFoundWords.push(trimmedWord);
+        }
+      }
+    }
+    
+    if (deletedWords.length === 0 && notFoundWords.length === 0) {
+      await safeSendMessage(chatId, 
+        "❌ فرمت صحیح: /deleteword کلمه1\nکلمه2\n...\n\nمثال:\n/deleteword Computer\nPhone", 
+        options
+      );
+      return;
+    }
+    
+    // ذخیره در فایل
+    fs.writeFileSync(
+      path.join(__dirname, "english_words.json"),
+      JSON.stringify(englishWords, null, 2),
+      "utf8"
+    );
+    
+    let messageText = "";
+    
+    if (deletedWords.length > 0) {
+      messageText += `🗑️ *${deletedWords.length} کلمه توسط ادمین حذف شد:*\n\n`;
+      deletedWords.forEach((word, index) => {
+        messageText += `${index + 1}. *${word.english}* = ${word.persian}\n`;
+      });
+      messageText += `\n📊 تعداد کل کلمات: ${Object.keys(englishWords).length}\n`;
+    }
+    
+    if (notFoundWords.length > 0) {
+      messageText += `\n⚠️ کلمات زیر یافت نشدند:\n`;
+      notFoundWords.forEach((word, index) => {
+        messageText += `${index + 1}. *${word}*\n`;
+      });
+    }
+    
+    await safeSendMessage(chatId, messageText, {
+      ...options,
+      parse_mode: "Markdown",
+    });
+  } catch (error) {
+    console.error("Deleteword command error:", error.message);
+    await safeSendMessage(
+      chatId,
+      "متاسفانه در حذف کلمات مشکلی پیش آمد.",
+      options
+    );
+  }
+});
+
+// 🎵 دستور /song - جستجو و نمایش متن آهنگ از اینترنت
+bot.onText(createCommandRegexWithParams('song'), async (msg, match) => {
+  const chatId = msg.chat.id;
+  const songName = match[1].trim();
+  const options = msg.is_topic_message
+    ? { message_thread_id: msg.message_thread_id }
+    : {};
+
+  try {
+    // ارسال پیام در حال جستجو
+    const searchingMsg = await safeSendMessage(chatId, 
+      `🔍 در حال جستجوی آهنگ "${songName}" از اینترنت...\n⏳ لطفاً صبر کنید...`, 
+      options
+    );
+
+    // جستجوی آنلاین - ابتدا API های رایگان، سپس Genius، سپس جایگزین‌ها
+    let songData = null;
+    
+    // ابتدا API های رایگان را امتحان کن
+    try {
+      console.log('🎵 Trying free APIs first...');
+      songData = await searchSongAlternative(songName);
+    } catch (error) {
+      console.log('❌ Free APIs failed:', error.message);
+    }
+    
+    // اگر API های رایگان موفق نبودند، Genius را امتحان کن
+    if (!songData) {
+      console.log('🔄 Free APIs failed, trying Genius...');
+      songData = await searchSongOnline(songName);
+    }
+
+    if (!songData) {
+      // اگر آنلاین پیدا نشد، از پایگاه داده محلی استفاده کن
+      const foundSong = Object.keys(songs).find(song => 
+        song.toLowerCase().includes(songName.toLowerCase()) ||
+        songName.toLowerCase().includes(song.toLowerCase())
+      );
+
+      if (foundSong) {
+        const song = songs[foundSong];
+        let messageText = `🎵 *${foundSong}* (از پایگاه داده محلی)\n`;
+        messageText += `🎤 *هنرمند:* ${song.artist}\n\n`;
+
+        // نمایش متن آهنگ با ترجمه
+        for (let i = 0; i < song.english.length; i++) {
+          messageText += `🔤 ${song.english[i]}\n`;
+          messageText += `🇮🇷 ${song.persian[i]}\n\n`;
+        }
+
+        await safeSendMessage(chatId, messageText, {
+          ...options,
+          parse_mode: "Markdown",
+        });
+      } else {
+        await safeSendMessage(chatId, 
+          `❌ آهنگ "${songName}" در اینترنت یا پایگاه داده محلی یافت نشد.\n\n💡 *نکات:*\n• نام آهنگ را دقیق‌تر وارد کنید\n• نام هنرمند را نیز اضافه کنید\n• از آهنگ‌های معروف استفاده کنید\n\n📝 *مثال:*\n/song Imagine John Lennon`, 
+          {
+            ...options,
+            parse_mode: "Markdown",
+          }
+        );
+      }
+      return;
+    }
+
+    // حذف پیام جستجو
+    if (searchingMsg) {
+      try {
+        await bot.deleteMessage(chatId, searchingMsg.message_id);
+      } catch (error) {
+        console.log('Could not delete searching message');
+      }
+    }
+
+    // ترجمه متن آهنگ
+    const translatedLyrics = await translateLyrics(songData.lyrics);
+
+    let messageText = `🎵 *${songData.title}*\n`;
+    messageText += `🎤 *هنرمند:* ${songData.artist}\n`;
+    messageText += `🌐 *منبع:* [Genius.com](${songData.url})\n\n`;
+
+    // نمایش متن آهنگ با ترجمه
+    for (let i = 0; i < songData.lyrics.length; i++) {
+      if (songData.lyrics[i].trim()) {
+        messageText += `🔤 ${songData.lyrics[i]}\n`;
+        messageText += `🇮🇷 ${translatedLyrics[i]}\n\n`;
+      }
+    }
+
+    // اگر متن طولانی باشد، آن را تقسیم کنیم
+    if (messageText.length > 4000) {
+      const parts = [];
+      let currentPart = `🎵 *${songData.title}*\n🎤 *هنرمند:* ${songData.artist}\n🌐 *منبع:* [Genius.com](${songData.url})\n\n`;
+      
+      for (let i = 0; i < songData.lyrics.length; i++) {
+        if (songData.lyrics[i].trim()) {
+          const line = `🔤 ${songData.lyrics[i]}\n🇮🇷 ${translatedLyrics[i]}\n\n`;
+          
+          if (currentPart.length + line.length > 4000) {
+            parts.push(currentPart);
+            currentPart = line;
+          } else {
+            currentPart += line;
+          }
+        }
+      }
+      
+      if (currentPart.trim()) {
+        parts.push(currentPart);
+      }
+
+      // ارسال قسمت اول
+      await safeSendMessage(chatId, parts[0], {
+        ...options,
+        parse_mode: "Markdown",
+      });
+
+      // ارسال بقیه قسمت‌ها با تأخیر
+      for (let i = 1; i < parts.length; i++) {
+        setTimeout(async () => {
+          await safeSendMessage(chatId, parts[i], {
+            ...options,
+            parse_mode: "Markdown",
+          });
+        }, i * 1000);
+      }
+    } else {
+      await safeSendMessage(chatId, messageText, {
+        ...options,
+        parse_mode: "Markdown",
+      });
+    }
+  } catch (error) {
+    console.error("Song command error:", error.message);
+    await safeSendMessage(chatId, 
+      `❌ متاسفانه در جستجوی آهنگ مشکلی پیش آمد.\n\n💡 *علل احتمالی:*\n• مشکل اتصال به اینترنت\n• آهنگ در سایت‌های موسیقی موجود نیست\n• نام آهنگ نادرست است\n\n📝 *لطفاً دوباره تلاش کنید*`, 
+      options
+    );
+  }
+});
+
+// 🎵 دستور /songs - راهنمای جستجوی آهنگ‌ها
+bot.onText(createCommandRegex('songs'), async (msg) => {
+  const chatId = msg.chat.id;
+  const options = msg.is_topic_message
+    ? { message_thread_id: msg.message_thread_id }
+    : {};
+
+  try {
+    const localSongCount = Object.keys(songs).length;
+    
+    let messageText = `🎵 *راهنمای جستجوی آهنگ‌ها*\n\n`;
+    messageText += `🌐 *جستجوی آنلاین:*\n`;
+    messageText += `ربات از سایت Genius.com برای جستجوی آهنگ‌ها استفاده می‌کند.\n\n`;
+    
+    messageText += `📚 *آهنگ‌های محلی موجود* (${localSongCount} آهنگ):\n`;
+    
+    if (localSongCount > 0) {
+      Object.keys(songs).forEach((songName, index) => {
+        const song = songs[songName];
+        messageText += `${index + 1}. **${songName}**\n`;
+        messageText += `   🎤 ${song.artist}\n\n`;
+      });
+    } else {
+      messageText += `هیچ آهنگ محلی موجود نیست.\n\n`;
+    }
+
+    messageText += `💡 *نحوه استفاده:*\n`;
+    messageText += `/song [نام آهنگ]\n`;
+    messageText += `/song [نام هنرمند + نام آهنگ]\n\n`;
+    
+    messageText += `📝 *مثال‌ها:*\n`;
+    messageText += `/song Imagine\n`;
+    messageText += `/song John Lennon Imagine\n`;
+    messageText += `/song Bohemian Rhapsody Queen\n`;
+    messageText += `/song Shape of You Ed Sheeran\n\n`;
+    
+    messageText += `⚠️ *نکات مهم:*\n`;
+    messageText += `• جستجو از اینترنت انجام می‌شود\n`;
+    messageText += `• ترجمه خودکار با Google Translate\n`;
+    messageText += `• در صورت عدم دسترسی، از آهنگ‌های محلی استفاده می‌شود\n`;
+    messageText += `• آهنگ‌های معروف و محبوب بهتر پیدا می‌شوند`;
+
+    await safeSendMessage(chatId, messageText, {
+      ...options,
+      parse_mode: "Markdown",
+    });
+  } catch (error) {
+    console.error("Songs command error:", error.message);
+    await safeSendMessage(chatId, "متاسفانه در نمایش راهنما مشکلی پیش آمد.", options);
+  }
+});
+
+// 📖 دستور /help - راهنمای جامع ربات
+bot.onText(createCommandRegex('help'), async (msg) => {
+  const chatId = msg.chat.id;
+  const options = msg.is_topic_message
+    ? { message_thread_id: msg.message_thread_id }
+    : {};
+
+  try {
+    const userIsAdmin = await isAdmin(msg.from.id, chatId);
+    const wordCount = Object.keys(englishWords).length;
+    const idiomCount = Object.keys(englishIdioms).length;
+    const songCount = Object.keys(songs).length;
+    const categoryCount = Object.keys(allCategories).length;
+
+    let messageText = `🤖 *راهنمای جامع ربات کوییز*\n\n`;
+    
+    messageText += `📊 *آمار ربات:*\n`;
+    messageText += `• دسته‌بندی‌های بازی: ${categoryCount}\n`;
+    messageText += `• کلمات انگلیسی: ${wordCount}\n`;
+    messageText += `• اصطلاحات انگلیسی: ${idiomCount}\n`;
+    messageText += `• آهنگ‌ها: ${songCount}\n\n`;
+
+    messageText += `🎮 *دستورات بازی:*\n`;
+    messageText += `/newgame - شروع بازی گروهی\n`;
+    messageText += `/cancelgame - لغو بازی فعال\n`;
+    messageText += `/quizz - آزمون انفرادی\n`;
+    messageText += `/cancelquizz - لغو آزمون\n\n`;
+
+    messageText += `📚 *دستورات یادگیری:*\n`;
+    messageText += `/translate [کلمه] - ترجمه کلمه انگلیسی\n`;
+    messageText += `/words [صفحه] - لیست کلمات با صفحه‌بندی\n`;
+    messageText += `/idioms - لیست اصطلاحات انگلیسی\n`;
+    messageText += `/randomword - کلمه تصادفی انگلیسی\n`;
+    messageText += `/search [کلمه] - جستجو در کلمات\n\n`;
+
+    messageText += `🎵 *دستورات موسیقی:*\n`;
+    messageText += `/song [نام آهنگ] - جستجو و نمایش متن آهنگ از اینترنت\n`;
+    messageText += `/songs - راهنمای جستجوی آهنگ‌ها\n\n`;
+
+    if (userIsAdmin) {
+      messageText += `🔐 *دستورات ادمین:*\n`;
+      messageText += `/addword - اضافه کردن کلمات جدید\n`;
+      messageText += `/deleteword - حذف کلمات\n`;
+      messageText += `/backup - پشتیبان‌گیری از کلمات\n`;
+      messageText += `/restore - بازیابی کلمات\n`;
+      messageText += `/setadmin [آیدی‌ها] - تنظیم ادمین‌ها\n`;
+      messageText += `/botstatus - وضعیت ربات\n\n`;
+    }
+
+    messageText += `🛠️ *دستورات کاربردی:*\n`;
+    messageText += `/help - این راهنما\n`;
+    messageText += `/stats - آمار تفصیلی ربات\n`;
+    messageText += `/ping - تست اتصال\n\n`;
+
+    messageText += `💡 *نکات مهم:*\n`;
+    messageText += `• برای بازی گروهی از /newgame استفاده کنید\n`;
+    messageText += `• کلمات با /translate ترجمه می‌شوند\n`;
+    messageText += `• دستورات ادمین فقط برای ادمین‌ها\n`;
+    messageText += `• از صفحه‌بندی برای دیدن همه کلمات استفاده کنید\n\n`;
+
+    messageText += `🎯 *مثال‌های کاربردی:*\n`;
+    messageText += `/translate computer\n`;
+    messageText += `/words 1\n`;
+    messageText += `/search phone\n`;
+    messageText += `/randomword\n`;
+
+    await safeSendMessage(chatId, messageText, {
+      ...options,
+      parse_mode: "Markdown",
+    });
+  } catch (error) {
+    console.error("Help command error:", error.message);
+    await safeSendMessage(chatId, "متاسفانه در نمایش راهنما مشکلی پیش آمد.", options);
+  }
+});
+
+// 📊 دستور /stats - آمار تفصیلی ربات
+bot.onText(/^\/stats$/, async (msg) => {
+  const chatId = msg.chat.id;
+  const options = msg.is_topic_message
+    ? { message_thread_id: msg.message_thread_id }
+    : {};
+
+  try {
+    const wordCount = Object.keys(englishWords).length;
+    const idiomCount = Object.keys(englishIdioms).length;
+    const songCount = Object.keys(songs).length;
+    const categoryCount = Object.keys(allCategories).length;
+    const activeGames = Object.keys(games).length;
+    const activeQuizSessions = Object.keys(quizSessions).length;
+
+    // محاسبه آمار دسته‌بندی‌ها
+    let categoryStats = "";
+    for (const [key, name] of Object.entries(allCategories)) {
+      const questionCount = questionDecks[key]?.deck?.length || 0;
+      categoryStats += `• ${name}: ${questionCount} سوال\n`;
+    }
+
+    let messageText = `📊 *آمار تفصیلی ربات*\n\n`;
+    
+    messageText += `🎮 *بازی‌ها:*\n`;
+    messageText += `• بازی‌های فعال: ${activeGames}\n`;
+    messageText += `• آزمون‌های فعال: ${activeQuizSessions}\n`;
+    messageText += `• دسته‌بندی‌های بازی: ${categoryCount}\n\n`;
+
+    messageText += `📚 *دسته‌بندی‌ها:*\n`;
+    messageText += categoryStats + `\n`;
+
+    messageText += `🔤 *کلمات و اصطلاحات:*\n`;
+    messageText += `• کلمات انگلیسی: ${wordCount}\n`;
+    messageText += `• اصطلاحات انگلیسی: ${idiomCount}\n`;
+    messageText += `• آهنگ‌ها: ${songCount}\n\n`;
+
+    messageText += `⏰ *وضعیت سیستم:*\n`;
+    messageText += `• زمان راه‌اندازی: ${new Date().toLocaleString('fa-IR')}\n`;
+    messageText += `• وضعیت: آنلاین ✅\n`;
+
+    await safeSendMessage(chatId, messageText, {
+      ...options,
+      parse_mode: "Markdown",
+    });
+  } catch (error) {
+    console.error("Stats command error:", error.message);
+    await safeSendMessage(chatId, "متاسفانه در نمایش آمار مشکلی پیش آمد.", options);
+  }
+});
+
+// 🔍 دستور /search - جستجو در کلمات
+bot.onText(/^\/search (.+)$/, async (msg, match) => {
+  const chatId = msg.chat.id;
+  const searchTerm = match[1].trim().toLowerCase();
+  const options = msg.is_topic_message
+    ? { message_thread_id: msg.message_thread_id }
+    : {};
+
+  try {
+    const results = [];
+    
+    // جستجو در کلمات انگلیسی
+    for (const [word, meaning] of Object.entries(englishWords)) {
+      if (word.toLowerCase().includes(searchTerm) || 
+          meaning.toLowerCase().includes(searchTerm)) {
+        results.push({ type: 'word', english: word, persian: meaning });
+      }
+    }
+
+    // جستجو در اصطلاحات
+    for (const [idiom, meaning] of Object.entries(englishIdioms)) {
+      if (idiom.toLowerCase().includes(searchTerm) || 
+          meaning.toLowerCase().includes(searchTerm)) {
+        results.push({ type: 'idiom', english: idiom, persian: meaning });
+      }
+    }
+
+    // جستجو در آهنگ‌ها
+    for (const [songName, song] of Object.entries(songs)) {
+      if (songName.toLowerCase().includes(searchTerm) || 
+          song.artist.toLowerCase().includes(searchTerm)) {
+        results.push({ 
+          type: 'song', 
+          english: `${songName} - ${song.artist}`, 
+          persian: 'آهنگ موسیقی' 
+        });
+      }
+    }
+
+    if (results.length === 0) {
+      await safeSendMessage(chatId, 
+        `❌ هیچ نتیجه‌ای برای "${searchTerm}" یافت نشد.\n\n💡 پیشنهادات:\n• املای کلمه را بررسی کنید\n• کلمات کوتاه‌تر امتحان کنید\n• از /words برای دیدن همه کلمات استفاده کنید`, 
+        options
+      );
+      return;
+    }
+
+    // محدود کردن نتایج به 10 مورد
+    const limitedResults = results.slice(0, 10);
+    
+    let messageText = `🔍 *نتایج جستجو برای "${searchTerm}"* (${results.length} نتیجه)\n\n`;
+    
+    limitedResults.forEach((result, index) => {
+      let icon = '🔤';
+      if (result.type === 'idiom') icon = '📖';
+      else if (result.type === 'song') icon = '🎵';
+      
+      messageText += `${icon} ${index + 1}. *${result.english}*\n   ${result.persian}\n\n`;
+    });
+
+    if (results.length > 10) {
+      messageText += `... و ${results.length - 10} نتیجه دیگر\n\n`;
+    }
+
+    messageText += `💡 برای ترجمه کامل از /translate استفاده کنید.`;
+
+    await safeSendMessage(chatId, messageText, {
+      ...options,
+      parse_mode: "Markdown",
+    });
+  } catch (error) {
+    console.error("Search command error:", error.message);
+    await safeSendMessage(chatId, "متاسفانه در جستجو مشکلی پیش آمد.", options);
+  }
+});
+
+// 🎲 دستور /randomword - کلمه تصادفی انگلیسی
+bot.onText(/^\/randomword$/, async (msg) => {
+  const chatId = msg.chat.id;
+  const options = msg.is_topic_message
+    ? { message_thread_id: msg.message_thread_id }
+    : {};
+
+  try {
+    const words = Object.keys(englishWords);
+    const idioms = Object.keys(englishIdioms);
+    const songsList = Object.keys(songs);
+    const allItems = [
+      ...words.map(word => ({ type: 'word', english: word, persian: englishWords[word] })),
+      ...idioms.map(idiom => ({ type: 'idiom', english: idiom, persian: englishIdioms[idiom] })),
+      ...songsList.map(song => ({ type: 'song', english: song, persian: songs[song].artist }))
+    ];
+
+    if (allItems.length === 0) {
+      await safeSendMessage(chatId, "❌ هیچ کلمه یا اصطلاحی در پایگاه داده وجود ندارد.", options);
+      return;
+    }
+
+    const randomItem = allItems[Math.floor(Math.random() * allItems.length)];
+    let icon = '🔤';
+    let typeText = 'کلمه';
+    
+    if (randomItem.type === 'idiom') {
+      icon = '📖';
+      typeText = 'اصطلاح';
+    } else if (randomItem.type === 'song') {
+      icon = '🎵';
+      typeText = 'آهنگ';
+    }
+
+    let messageText = `${icon} *${typeText} تصادفی:*\n\n`;
+    messageText += `🔤 *${randomItem.english}*\n`;
+    messageText += `🇮🇷 ${randomItem.persian}\n\n`;
+    
+    if (randomItem.type === 'song') {
+      messageText += `💡 برای دیدن متن آهنگ از /song ${randomItem.english} استفاده کنید.`;
+    } else {
+      messageText += `💡 برای تلفظ از /translate ${randomItem.english} استفاده کنید.`;
+    }
+
+    await safeSendMessage(chatId, messageText, {
+      ...options,
+      parse_mode: "Markdown",
+    });
+  } catch (error) {
+    console.error("Randomword command error:", error.message);
+    await safeSendMessage(chatId, "متاسفانه در انتخاب کلمه تصادفی مشکلی پیش آمد.", options);
+  }
+});
+
+// 💾 دستور /backup - پشتیبان‌گیری از کلمات (ادمین)
+bot.onText(/^\/backup$/, async (msg) => {
+  const chatId = msg.chat.id;
+  const userId = msg.from.id;
+  const options = msg.is_topic_message
+    ? { message_thread_id: msg.message_thread_id }
+    : {};
+
+  try {
+    // بررسی مجوز ادمین
+    const userIsAdmin = await isAdmin(userId, chatId);
+    if (!userIsAdmin) {
+      await safeSendMessage(chatId, "❌ فقط ادمین‌ها می‌توانند پشتیبان‌گیری کنند.", options);
+      return;
+    }
+
+    const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+    const backupData = {
+      timestamp: new Date().toISOString(),
+      words: englishWords,
+      idioms: englishIdioms,
+      version: "1.0"
+    };
+
+    const backupFileName = `backup_${timestamp}.json`;
+    const backupPath = path.join(__dirname, backupFileName);
+    
+    fs.writeFileSync(backupPath, JSON.stringify(backupData, null, 2), 'utf8');
+
+    let messageText = `💾 *پشتیبان‌گیری موفقیت‌آمیز*\n\n`;
+    messageText += `📁 فایل: \`${backupFileName}\`\n`;
+    messageText += `📊 کلمات: ${Object.keys(englishWords).length}\n`;
+    messageText += `📖 اصطلاحات: ${Object.keys(englishIdioms).length}\n`;
+    messageText += `⏰ زمان: ${new Date().toLocaleString('fa-IR')}\n\n`;
+    messageText += `💡 برای بازیابی از /restore ${backupFileName} استفاده کنید.`;
+
+    await safeSendMessage(chatId, messageText, {
+      ...options,
+      parse_mode: "Markdown",
+    });
+  } catch (error) {
+    console.error("Backup command error:", error.message);
+    await safeSendMessage(chatId, "متاسفانه در پشتیبان‌گیری مشکلی پیش آمد.", options);
+  }
+});
+
+// 🔄 دستور /restore - بازیابی کلمات (ادمین)
+bot.onText(/^\/restore (.+)$/, async (msg, match) => {
+  const chatId = msg.chat.id;
+  const userId = msg.from.id;
+  const backupFileName = match[1].trim();
+  const options = msg.is_topic_message
+    ? { message_thread_id: msg.message_thread_id }
+    : {};
+
+  try {
+    // بررسی مجوز ادمین
+    const userIsAdmin = await isAdmin(userId, chatId);
+    if (!userIsAdmin) {
+      await safeSendMessage(chatId, "❌ فقط ادمین‌ها می‌توانند بازیابی کنند.", options);
+      return;
+    }
+
+    const backupPath = path.join(__dirname, backupFileName);
+    
+    if (!fs.existsSync(backupPath)) {
+      await safeSendMessage(chatId, `❌ فایل پشتیبان \`${backupFileName}\` یافت نشد.`, {
+        ...options,
+        parse_mode: "Markdown",
+      });
+      return;
+    }
+
+    const backupData = JSON.parse(fs.readFileSync(backupPath, 'utf8'));
+    
+    // بررسی فرمت فایل پشتیبان
+    if (!backupData.words || !backupData.idioms) {
+      await safeSendMessage(chatId, "❌ فایل پشتیبان معتبر نیست.", options);
+      return;
+    }
+
+    // پشتیبان‌گیری از داده‌های فعلی قبل از بازیابی
+    const currentBackup = {
+      words: englishWords,
+      idioms: englishIdioms,
+      timestamp: new Date().toISOString()
+    };
+    
+    const emergencyBackupName = `emergency_backup_${Date.now()}.json`;
+    fs.writeFileSync(
+      path.join(__dirname, emergencyBackupName), 
+      JSON.stringify(currentBackup, null, 2), 
+      'utf8'
+    );
+
+    // بازیابی داده‌ها
+    Object.assign(englishWords, backupData.words);
+    Object.assign(englishIdioms, backupData.idioms);
+
+    // ذخیره در فایل‌ها
+    fs.writeFileSync(
+      path.join(__dirname, "english_words.json"),
+      JSON.stringify(englishWords, null, 2),
+      "utf8"
+    );
+
+    let messageText = `🔄 *بازیابی موفقیت‌آمیز*\n\n`;
+    messageText += `📁 فایل: \`${backupFileName}\`\n`;
+    messageText += `📊 کلمات بازیابی شده: ${Object.keys(backupData.words).length}\n`;
+    messageText += `📖 اصطلاحات بازیابی شده: ${Object.keys(backupData.idioms).length}\n`;
+    messageText += `⏰ زمان پشتیبان: ${new Date(backupData.timestamp).toLocaleString('fa-IR')}\n\n`;
+    messageText += `🛡️ پشتیبان اضطراری: \`${emergencyBackupName}\``;
+
+    await safeSendMessage(chatId, messageText, {
+      ...options,
+      parse_mode: "Markdown",
+    });
+  } catch (error) {
+    console.error("Restore command error:", error.message);
+    await safeSendMessage(chatId, "متاسفانه در بازیابی مشکلی پیش آمد.", options);
+  }
+});
+
+// Add command to list available idioms
+bot.onText(/^\/idioms$/, (msg) => {
+  const chatId = msg.chat.id;
+  const options = msg.is_topic_message
+    ? { message_thread_id: msg.message_thread_id }
+    : {};
+  
+  const idiomsList = Object.keys(englishIdioms).slice(0, 20); // Show first 20 idioms
+  const messageText = `📚 *لیست اصطلاحات انگلیسی موجود:*\n\n${idiomsList.map((idiom, index) => 
+    `${index + 1}. \`${idiom}\``
+  ).join('\n')}\n\n💡 *نحوه استفاده:*\n/translate [اصطلاح]\n\n📝 *مثال:*\n/translate break the ice`;
+  
+  safeSendMessage(chatId, messageText, {
+    ...options,
+    parse_mode: "Markdown",
+  });
+});
+
+// Admin commands for warning management
+// Optimized warning commands
+bot.onText(/^\/warn$/, async (msg) => {
+  if (!msg.reply_to_message) return;
+  
+  const chatId = msg.chat.id;
+  const adminId = msg.from.id;
+  const targetUserId = msg.reply_to_message.from.id;
+  const targetUserName = msg.reply_to_message.from.first_name || 'User';
+
+  if (!(await isAdmin(adminId, chatId))) return;
+
+  try {
+    const totalWarnings = await addWarning(targetUserId, chatId, adminId);
+    let message = `⚠️ اخطار به ${targetUserName}\n📊 تعداد اخطارها: ${totalWarnings}/3`;
+    
+    if (totalWarnings >= 3) {
+      message += `\n🚫 کاربر ${targetUserName} به ۳ اخطار رسید. اقدام دستی لازم است.`;
+    } else {
+      message += `\n⚠️ ${3 - totalWarnings} اخطار تا رسیدن به ۳ اخطار باقی مانده.`;
+    }
+
+    await safeSendMessage(chatId, message);
+  } catch (error) {
+    console.error('Warn error:', error);
+    await safeSendMessage(chatId, `❌ خطا در پردازش اخطار: ${error.message}`);
+  }
+});
+
+bot.onText(/^\/warnuser (.+)$/, async (msg, match) => {
+  const chatId = msg.chat.id;
+  const adminId = msg.from.id;
+  const targetUsername = match[1].replace('@', '').trim();
+
+  if (!(await isAdmin(adminId, chatId))) return;
+
+  try {
+    let targetUser = null;
+    
+    // Try direct username lookup first (fastest)
+    try {
+      const chatMember = await bot.getChatMember(chatId, `@${targetUsername}`);
+      targetUser = chatMember.user;
+    } catch (e) {
+      // Fallback: try numeric ID if it's numeric
+      if (/^\d+$/.test(targetUsername)) {
+        try {
+          const chatMember = await bot.getChatMember(chatId, parseInt(targetUsername));
+          targetUser = chatMember.user;
+        } catch (e3) {}
+      }
+    }
+
+    if (!targetUser) {
+      await safeSendMessage(chatId, `❌ کاربر ${targetUsername} پیدا نشد.`);
+      return;
+    }
+
+    const totalWarnings = await addWarning(targetUser.id, chatId, adminId);
+    let message = `⚠️ اخطار به ${targetUser.first_name}\n📊 تعداد اخطارها: ${totalWarnings}/3`;
+    
+    if (totalWarnings >= 3) {
+      message += `\n🚫 کاربر ${targetUser.first_name} به ۳ اخطار رسید. اقدام دستی لازم است.`;
+    } else {
+      message += `\n⚠️ ${3 - totalWarnings} اخطار تا رسیدن به ۳ اخطار باقی مانده.`;
+    }
+
+    await safeSendMessage(chatId, message);
+  } catch (error) {
+    console.error('Warnuser error:', error);
+    await safeSendMessage(chatId, `❌ خطا در اخطار دادن: ${error.message}`);
+  }
+});
+
+bot.onText(/^\/unwarn$/, async (msg) => {
+  if (!msg.reply_to_message) return;
+  
+  const chatId = msg.chat.id;
+  const adminId = msg.from.id;
+  const targetUserId = msg.reply_to_message.from.id;
+  const targetUserName = msg.reply_to_message.from.first_name || 'User';
+
+  if (!(await isAdmin(adminId, chatId))) return;
+
+  try {
+    const totalWarnings = await removeWarning(targetUserId, chatId, adminId);
+    await safeSendMessage(chatId, `✅ اخطار از ${targetUserName} حذف شد\n📊 تعداد اخطارها: ${totalWarnings}/3`);
+  } catch (error) {
+    console.error('Unwarn error:', error);
+    await safeSendMessage(chatId, `❌ خطا در حذف اخطار: ${error.message}`);
+  }
+});
+
+bot.onText(/^\/warnings$/, async (msg) => {
+  if (!msg.reply_to_message) return;
+  
+  const chatId = msg.chat.id;
+  const adminId = msg.from.id;
+  const targetUserId = msg.reply_to_message.from.id;
+  const targetUserName = msg.reply_to_message.from.first_name || 'User';
+
+  if (!(await isAdmin(adminId, chatId))) return;
+
+  try {
+    const userKey = `${chatId}_${targetUserId}`;
+    const userWarnings = warnings[userKey];
+    
+    if (!userWarnings || userWarnings.totalWarnings === 0) {
+      await safeSendMessage(chatId, `✅ ${targetUserName} هیچ اخطاری ندارد.`);
+      return;
+    }
+
+    let message = `📊 اخطارهای ${targetUserName}:\n🔢 مجموع: ${userWarnings.totalWarnings}/3\n\n📝 تاریخچه:\n`;
+    userWarnings.warnings.forEach((warning, index) => {
+      const date = new Date(warning.timestamp).toLocaleString('fa-IR');
+      message += `${index + 1}. ${warning.reason} - ${date}\n`;
+    });
+
+    await safeSendMessage(chatId, message);
+  } catch (error) {
+    console.error('Warnings error:', error);
+    await safeSendMessage(chatId, `❌ خطا در دریافت اخطارها: ${error.message}`);
+  }
+});
+
+bot.onText(/^\/banuser$/, async (msg) => {
+  if (!msg.reply_to_message) return;
+  
+  const chatId = msg.chat.id;
+  const adminId = msg.from.id;
+  const targetUserId = msg.reply_to_message.from.id;
+  const targetUserName = msg.reply_to_message.from.first_name || 'User';
+
+  if (!(await isAdmin(adminId, chatId))) return;
+
+  try {
+    // Check if user has 3 or more warnings
+    const userKey = `${chatId}_${targetUserId}`;
+    const userWarnings = warnings[userKey];
+    
+    if (!userWarnings || userWarnings.totalWarnings < 3) {
+      await safeSendMessage(chatId, `❌ کاربر ${targetUserName} هنوز ۳ اخطار ندارد. اخطارهای فعلی: ${userWarnings ? userWarnings.totalWarnings : 0}/3`);
+      return;
+    }
+
+    // Try to ban the user
+    try {
+      await bot.banChatMember(chatId, targetUserId);
+      await safeSendMessage(chatId, `🚫 کاربر ${targetUserName} به دلیل رسیدن به ۳ اخطار بن شد.`);
+    } catch (banError) {
+      console.error('Ban error:', banError.message);
+      await safeSendMessage(chatId, `❌ نتوانستیم کاربر ${targetUserName} را بن کنیم. ربات ممکن است دسترسی بن کردن نداشته باشد.`);
+    }
+  } catch (error) {
+    console.error('Banuser error:', error);
+    await safeSendMessage(chatId, `❌ خطا در پردازش بن: ${error.message}`);
+  }
+});
 
 bot.onText(/^\/warnhelp$/, async (msg) => {
   const chatId = msg.chat.id;
   const adminId = msg.from.id;
 
-  if (session.timer) {
-    clearTimeout(session.timer);
-  }
-
-  const correctCount = session.answers.filter((ans) => ans.isCorrect).length;
-  const incorrectCount = session.answers.length - correctCount;
+  if (!(await isAdmin(adminId, chatId))) return;
 
   const helpMessage = `🛡️ **دستورات سیستم اخطار:**
 
@@ -3577,13 +5028,8 @@ bot.onText(/^\/warnhelp$/, async (msg) => {
 • \`/unwarn\` - ریپلای برای حذف اخطار
 • \`/warnings\` - ریپلای برای مشاهده تاریخچه اخطارها
 
-  session.status = "finished";
-  session.score = correctCount;
-  session.incorrectCount = incorrectCount;
-  session.name = quizSessions[userId].name;
-  quizSessions[userId] = session;
-  saveQuizResults(quizSessions);
-}
+**دستور بن:**
+• \`/banuser\` - ریپلای برای بن کردن کاربر (نیاز به ۳+ اخطار)
 
 **نحوه کار:**
 • کاربران اخطار دریافت می‌کنند (۱/۳، ۲/۳، ۳/۳)
@@ -3594,7 +5040,7 @@ bot.onText(/^\/warnhelp$/, async (msg) => {
   await safeSendMessage(chatId, helpMessage);
 });
 
-bot.onText(/\/start/, (msg) => {
+bot.onText(/^\/clearcache$/, async (msg) => {
   const chatId = msg.chat.id;
   const adminId = msg.from.id;
 
@@ -3604,20 +5050,39 @@ bot.onText(/\/start/, (msg) => {
   await safeSendMessage(chatId, `✅ کش ادمین‌ها پاک شد.`);
 });
 
-bot.onText(/\/newgame/, async (msg) => {
-  const options = msg.is_topic_message
-    ? { message_thread_id: msg.message_thread_id }
-    : {};
-  if (msg.chat.type === "private") {
-    return bot.sendMessage(
-      msg.chat.id,
-      "این بازی فقط در گروه‌ها قابل اجراست!",
-      options
-    );
+// Test command to check admin status
+bot.onText(/^\/testadmin$/, async (msg) => {
+  const chatId = msg.chat.id;
+  const userId = msg.from.id;
+  
+  try {
+    const isUserAdmin = await isAdmin(userId, chatId);
+    const adminIds = process.env.ADMIN_IDS ? process.env.ADMIN_IDS.split(',').map(id => parseInt(id.trim())) : [];
+    
+    let message = `🔍 *تست وضعیت ادمین:*\n\n`;
+    message += `👤 شناسه کاربری شما: \`${userId}\`\n`;
+    message += `✅ وضعیت ادمین: ${isUserAdmin ? '✅ ادمین هستید' : '❌ ادمین نیستید'}\n`;
+    message += `⚙️ ADMIN_IDS تنظیم شده: ${adminIds.length > 0 ? '✅ بله' : '❌ خیر'}\n`;
+    
+    if (adminIds.length > 0) {
+      message += `📝 شناسه‌های ادمین: \`${adminIds.join(', ')}\`\n`;
+    } else {
+      message += `\n⚠️ *راه حل:*\n`;
+      message += `1. فایل \`.env\` ایجاد کنید\n`;
+      message += `2. خط زیر را اضافه کنید:\n`;
+      message += `\`ADMIN_IDS=${userId}\`\n`;
+      message += `3. ربات را مجدداً راه‌اندازی کنید`;
+    }
+    
+    await safeSendMessage(chatId, message, { parse_mode: 'Markdown' });
+  } catch (error) {
+    console.error('Test admin error:', error);
+    await safeSendMessage(chatId, `❌ خطا در تست ادمین: ${error.message}`);
   }
 });
 
-bot.onText(/\/cancelgame/, async (msg) => {
+// Command to set admin IDs temporarily
+bot.onText(/^\/setadmin (.+)$/, async (msg, match) => {
   const chatId = msg.chat.id;
   const userId = msg.from.id;
   
@@ -3678,7 +5143,8 @@ bot.onText(/^\/testwarn$/, async (msg) => {
   }
 });
 
-bot.onText(/\/translate (.+)/, async (msg, match) => {
+// Command to view all warnings for testing
+bot.onText(/^\/testwarnings$/, async (msg) => {
   const chatId = msg.chat.id;
   
   try {
@@ -3900,25 +5366,21 @@ bot.on("callback_query", async (callbackQuery) => {
 
       quizSessions[userId] = {
         status: "in_progress",
+        score: 0,
         correctCount: 0,
         incorrectCount: 0,
         currentQuestionIndex: 0,
         questions: quizzQuestions.slice(),
-        answers: [],
+        answers: [], // New array to store user answers
         name: from.first_name,
       };
-      // Handle /translate command with or without parameters
-bot.onText(createCommandRegex('translate'), async (msg, match) => {
-  const chatId = msg.chat.id;
-  const fullText = msg.text;
-  
-  // Extract the word to translate from the full text
-  const wordToTranslate = fullText.replace(/^\/translate(@\w+)?\s*/, '').trim();
-  
-  if (!wordToTranslate) {
-    await safeSendMessage(chatId, "❌ لطفاً کلمه یا اصطلاحی برای ترجمه وارد کنید.\n\nمثال: /translate hello");
-    return;
-  }(
+      sendQuizQuestion(chatId, userId);
+    } else if (data === "quizz_results") {
+      const finishedParticipants = Object.entries(quizSessions).filter(
+        ([id, session]) => session.status === "finished"
+      );
+      if (finishedParticipants.length === 0) {
+        return await safeSendMessage(
           chatId,
           "❌ هنوز کسی در آزمون شرکت نکرده است.",
           options
@@ -3926,18 +5388,16 @@ bot.onText(createCommandRegex('translate'), async (msg, match) => {
       }
 
       const sortedParticipants = finishedParticipants
-        .sort(([, a], [, b]) => b.correctCount - a.correctCount)
+        .sort(([, a], [, b]) => b.score - a.score)
         .slice(0, 10);
 
       let resultsText = "🏆 *نتایج آزمون زبان انگلیسی* 🏆\n\n";
       sortedParticipants.forEach(([id, session], index) => {
         const medal =
           index === 0 ? "🥇" : index === 1 ? "🥈" : index === 2 ? "🥉" : "▫️";
-        const correctCount = session.answers.filter(
-          (ans) => ans.isCorrect
-        ).length;
-        const incorrectCount = session.answers.length - correctCount;
-        resultsText += `${medal} *${session.name}*: ${correctCount} ✅ / ${incorrectCount} ❌\n`;
+        const totalQuestions = session.answers.length;
+        const incorrectCount = totalQuestions - session.score;
+        resultsText += `${medal} *${session.name}*: ${session.score} ✅ / ${incorrectCount} ❌\n`;
       });
 
       await safeSendMessage(chatId, resultsText, {
@@ -3979,7 +5439,8 @@ bot.onText(createCommandRegex('translate'), async (msg, match) => {
     } else if (data.startsWith("quizz_answer_")) {
       if (!session || session.status !== "in_progress") return;
 
-      clearTimeout(session.timer);
+  clearTimeout(session.timer); // توقف تایمر
+  safeApiCall(() => bot.deleteMessage(chatId, session.currentMessageId)).catch(() => {});
 
       const currentQuestion = session.questions[session.currentQuestionIndex];
       const chosenOptionIndex = parseInt(data.split("_")[2], 10);
@@ -3988,6 +5449,12 @@ bot.onText(createCommandRegex('translate'), async (msg, match) => {
       );
       const isCorrect =
         chosenOptionText === he.decode(currentQuestion.correct_answer);
+
+      if (isCorrect) {
+        session.correctCount++;
+      } else {
+        session.incorrectCount++;
+      }
 
       session.answers.push({
         question: currentQuestion.question,
@@ -4078,11 +5545,12 @@ bot.onText(createCommandRegex('translate'), async (msg, match) => {
       const chosenOptionIndex = parseInt(value, 10);
       const chosenOptionText = currentQuestion.options[chosenOptionIndex];
       const isCorrect = chosenOptionText === currentQuestion.correct_answer;
-
+      
+      // اطمینان از وجود game.answers[game.currentRound]
       if (!game.answers[game.currentRound]) {
         game.answers[game.currentRound] = {};
       }
-
+      
       if (isCorrect) game.players[userId].score++;
       game.answers[game.currentRound][userId] = {
         answer: chosenOptionText,
@@ -4100,26 +5568,46 @@ bot.onText(createCommandRegex('translate'), async (msg, match) => {
   }
 });
 
-process.on("uncaughtException", (error) => {
-  console.error("❌ خطای غیرمنتظره:", error.message);
-  saveQuizResults(quizSessions);
+// مدیریت خطاهای عمومی — از handlerهای بالا استفاده می‌کنیم
+// (اینجا صرفاً لاگ می‌کنیم؛ shutdown توسط global handlers انجام می‌شود)
+process.on('uncaughtException', (error) => {
+  console.error('❌ خطای غیرمنتظره (bottom handler):', error && error.message ? error.message : error);
+  // از graceful shutdown استفاده کن
+  if (typeof gracefulShutdown === 'function') gracefulShutdown('uncaughtException (bottom handler)', error);
 });
 
-process.on("unhandledRejection", (reason, promise) => {
-  console.error("❌ خطای Promise:", reason);
+process.on('unhandledRejection', (reason, promise) => {
+  console.error('❌ خطای Promise (bottom handler):', reason);
+  if (typeof gracefulShutdown === 'function') gracefulShutdown('unhandledRejection (bottom handler)', reason);
 });
 
-bot.on("polling_error", (error) => {
-  console.error("❌ خطای Polling:", error.message);
+// مدیریت خطاهای تلگرام با handling بهتر conflicts
+bot.on('polling_error', (error) => {
+  console.error('❌ خطای Polling:', error && error.message ? error.message : error);
+  
+  // Handle specific conflict errors
+  if (error.message && error.message.includes('409 Conflict')) {
+    console.log('⚠️ Conflict detected with another bot instance.');
+    console.log('💡 Recommendation: Stop all bot instances with "taskkill /f /im node.exe" then restart.');
+    
+    // Don't auto-retry to avoid infinite loops
+    // Let the user manually restart after stopping conflicts
+  }
 });
 
-bot.on("error", (error) => {
-  console.error("❌ خطای بات:", error.message);
+bot.on('error', (error) => {
+  console.error('❌ خطای بات:', error && error.message ? error.message : error);
+  
+  // Handle rate limiting and other errors
+  if (error.message && error.message.includes('429')) {
+    console.log('⚠️ Rate limited by Telegram. Bot will continue after cooldown.');
+  }
 });
 
 console.log("✅ ربات کوییز با موفقیت روشن شد!");
 
 // ✅ اضافه کردن دستورات به منوی ربات
+// این کد را فقط یک بار اجرا کنید و سپس می‌توانید آن را حذف کنید.
 bot.setMyCommands([
   {
     command: "help",
