@@ -1,5 +1,8 @@
 {
-  "platform": "node",
-  "app-name": "my-telegram-bot",
-  "port": 3005
+  "app": "englishbot",
+  "port": 3000,
+  "build": {
+    "location": "iran"
+  },
+  "disks": []
 }
