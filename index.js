@@ -2178,6 +2178,22 @@ const RATE_LIMIT_SECONDS = parseInt(process.env.RATE_LIMIT_SECONDS || '2', 10); 
 const userRateMap = new Map(); // userId -> timestamp of last action
 const globalRateMap = new Map(); // command -> timestamp of last global execution
 
+// Message delay to prevent rate limiting
+const MESSAGE_DELAY = 1000; // 1 second delay between messages
+let lastMessageTime = 0;
+
+// Helper function to add delay between messages
+async function addMessageDelay() {
+  const now = Date.now();
+  const timeSinceLastMessage = now - lastMessageTime;
+  if (timeSinceLastMessage < MESSAGE_DELAY) {
+    const delay = MESSAGE_DELAY - timeSinceLastMessage;
+    console.log(`⏳ Adding ${delay}ms delay to prevent rate limiting...`);
+    await new Promise(resolve => setTimeout(resolve, delay));
+  }
+  lastMessageTime = Date.now();
+}
+
 // Bot username for command handling
 let botUsername = '';
 
@@ -2865,9 +2881,26 @@ function clearAdminCache(userId = null, chatId = null) {
 
 async function safeSendMessage(chatId, message, options = {}) {
   try {
+    // Add delay to prevent rate limiting
+    await addMessageDelay();
     await bot.sendMessage(chatId, message, options);
     return true;
   } catch (error) {
+    // Handle rate limiting
+    if (error.response?.statusCode === 429) {
+      console.log('⚠️ Rate limited, waiting...');
+      const retryAfter = error.response?.body?.parameters?.retry_after || 5;
+      console.log(`⏳ Waiting ${retryAfter} seconds before retry...`);
+      await new Promise(resolve => setTimeout(resolve, retryAfter * 1000));
+      try {
+        await bot.sendMessage(chatId, message, options);
+        return true;
+      } catch (retryError) {
+        console.error('Error after retry:', retryError.message);
+        return false;
+      }
+    }
+    
     if (error.response?.body?.error_code === 403) {
       console.log('Bot is not a member of the group chat, skipping message send');
       return false;
