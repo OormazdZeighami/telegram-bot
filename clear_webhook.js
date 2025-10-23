@@ -1,42 +1,43 @@
-// اسکریپت برای پاک کردن webhook
+#!/usr/bin/env node
+
+// Clear Webhook Script
+console.log('🔧 شروع پاک کردن webhook...\n');
+
 require('dotenv').config();
-const TelegramBot = require('node-telegram-bot-api');
 
-const token = process.env.BOT_TOKEN;
-
-if (!token) {
-  console.error('❌ BOT_TOKEN در فایل .env یافت نشد!');
-  process.exit(1);
+if (!process.env.BOT_TOKEN) {
+    console.log('❌ BOT_TOKEN not set in .env file');
+    process.exit(1);
 }
 
-const bot = new TelegramBot(token);
+const axios = require('axios');
 
 async function clearWebhook() {
-  try {
-    console.log('🔄 در حال پاک کردن webhook...');
-    
-    // حذف webhook
-    const result = await bot.deleteWebHook();
-    console.log('✅ Webhook با موفقیت پاک شد:', result);
-    
-    // بررسی وضعیت webhook
-    const info = await bot.getWebHookInfo();
-    console.log('\n📊 اطلاعات webhook فعلی:');
-    console.log('  URL:', info.url || '(خالی)');
-    console.log('  Pending updates:', info.pending_update_count);
-    
-    if (!info.url) {
-      console.log('\n✅ ربات آماده اجرا در حالت Polling است!');
-    } else {
-      console.log('\n⚠️ هنوز webhook فعال است:', info.url);
+    try {
+        console.log('🔄 پاک کردن webhook...');
+        
+        const response = await axios.post(`https://api.telegram.org/bot${process.env.BOT_TOKEN}/deleteWebhook`);
+        
+        if (response.data.ok) {
+            console.log('✅ Webhook successfully deleted');
+            console.log('📋 Response:', response.data);
+        } else {
+            console.log('❌ Failed to delete webhook:', response.data);
+        }
+        
+        console.log('\n🔄 بررسی وضعیت webhook...');
+        const statusResponse = await axios.get(`https://api.telegram.org/bot${process.env.BOT_TOKEN}/getWebhookInfo`);
+        
+        if (statusResponse.data.ok) {
+            console.log('📋 Webhook info:', statusResponse.data.result);
+        }
+        
+    } catch (error) {
+        console.log('❌ Error:', error.message);
+        if (error.response) {
+            console.log('📋 Response data:', error.response.data);
+        }
     }
-    
-  } catch (error) {
-    console.error('❌ خطا در پاک کردن webhook:', error.message);
-  }
-  
-  process.exit(0);
 }
 
 clearWebhook();
-
