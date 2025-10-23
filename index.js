@@ -2184,7 +2184,7 @@ let botUsername = '';
 // Helper function to create command regex that handles bot username
 function createCommandRegex(command) {
   // This regex will match both "/command" and "/command@botusername"
-  return new RegExp(`^\\/${command}(@\\w+)?\\s*$`);
+  return new RegExp(`^\\/${command}(@\\w+)?\\s*`);
 }
 
 // Helper function to create command regex with parameters
@@ -3612,7 +3612,7 @@ async function startNextRound(chatId) {
 // 🎯 توابع و منطق آزمون انفرادی (Quizz)
 // ----------------------------------------------------
 
-bot.onText(/^\/quizz\b/, (msg) => {
+bot.onText(/^\/quizz(@\w+)?\b/, (msg) => {
   try {
     // rate limit check
     if (isRateLimited(msg.from && msg.from.id)) {
@@ -3652,7 +3652,7 @@ bot.onText(/^\/quizz\b/, (msg) => {
   }
 });
 
-bot.onText(/^\/cancelquizz$/, (msg) => {
+bot.onText(/^\/cancelquizz(@\w+)?$/, (msg) => {
   const chatId = msg.chat.id;
   const userId = msg.from.id;
   const options = msg.is_topic_message
