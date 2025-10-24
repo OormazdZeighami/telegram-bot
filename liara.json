@@ -1,5 +1,6 @@
 {
   "platform": "node",
   "app-name": "my-telegram-bot",
-  "port": 3005
+  "port": 3005,
+  "start": "npm run debug"
 }

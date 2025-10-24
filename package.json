@@ -4,7 +4,11 @@
   "main": "index.js",
   "scripts": {
     "start": "node index.js",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "debug": "node liara_debug.js",
+    "test": "node test_connection.js",
+    "host-debug": "node host_debug.js",
+    "add-debug": "node add_liara_debug.js",
+    "dev": "nodemon index.js"
   },
   "keywords": [],
   "author": "",
